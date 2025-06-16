@@ -4,19 +4,8 @@ import {
   SignedIn,
   UserButton,
 } from '@clerk/nextjs'
-import { dark, neobrutalism, shadesOfPurple } from '@clerk/themes'
-import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
+import { dark } from '@clerk/themes'
 
 export const metadata: Metadata = {
   title: 'Pet-Track',
@@ -30,24 +19,19 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
-      appearance={{
-        baseTheme: [neobrutalism],
-        variables: { colorPrimary: 'blue' },
-        signIn: {
-          baseTheme: [shadesOfPurple],
-          variables: { colorPrimary: 'green' },
-        },
+    appearance={{
+        baseTheme: dark, // toggle this if you're using dark mode
       }}
-    >
-      <html lang="en">
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      >
+      <html lang="pt-BR">
+        <body>
           <SignedIn>
-            <header className=''>
+            <header className='h-[10dvh]'>
               <UserButton />
             </header>
+            <footer></footer>
           </SignedIn>
           {children}
-          <footer></footer>
         </body>
       </html>
     </ClerkProvider>
