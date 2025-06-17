@@ -6,6 +6,7 @@ import {
 } from '@clerk/nextjs'
 import './globals.css'
 import { dark } from '@clerk/themes'
+import NavBar from '@/components/feat/NavBar'
 
 export const metadata: Metadata = {
   title: 'Pet-Track',
@@ -20,16 +21,16 @@ export default function RootLayout({
   return (
     <ClerkProvider
     appearance={{
-        baseTheme: dark, // toggle this if you're using dark mode
+        baseTheme: dark,
       }}
       >
       <html lang="pt-BR">
-        <body>
+        <body className='bg-background'>
           <SignedIn>
-            <header className='h-[10dvh]'>
+            <header className='flex items-center px-4 h-[10dvh] bg-primary'>
               <UserButton />
             </header>
-            <footer></footer>
+            <NavBar />
           </SignedIn>
           {children}
         </body>
