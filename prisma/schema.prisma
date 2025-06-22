@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id      Int     @id @default(autoincrement())
+  name    String
+  address String
+  phone   String?
+  email   String?
+
+  @@map(name: "stores")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  clerkId   String   @unique
+  name      String
+  cpf       String?
+  phone     String?
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Pet       Pet[]
+
+  @@map(name: "users")
+}
+
+model Pet {
+  id           Int           @id @default(autoincrement())
+  name         String
+  species      String
+  breed        String?
+  age          Int?
+  owner_id     Int
+  owner        User          @relation(fields: [owner_id], references: [id])
+  vaccinations Vaccination[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime
+
+  @@map(name: "pets")
+}
+
+model Vaccination {
+  id           Int      @id @default(autoincrement())
+  pet_id       Int
+  vaccine_name String
+  pet          Pet      @relation(fields: [pet_id], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+
+  @@map(name: "vaccinations")
+}
