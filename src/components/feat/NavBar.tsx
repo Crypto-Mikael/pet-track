@@ -1,14 +1,16 @@
 'use client';
 
-import { Dog, Home, User } from 'lucide-react';
+import { Bell, Home, PawPrint, Store, User } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 const navItems = [
   { href: '/', icon: Home },
-  { href: '/pet', icon: Dog },
+  { href: '/pet', icon: PawPrint },
+  { href: '/shops', icon: Store },
   { href: '/user', icon: User },
+  { href: '/news', icon: Bell },
 ];
 
 export default function NavBar() {

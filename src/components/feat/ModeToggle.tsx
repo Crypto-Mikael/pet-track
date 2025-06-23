@@ -10,7 +10,7 @@ export function ModeToggle() {
   const { setTheme, theme } = useTheme()
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 p-2">
       <Button className="text-xl cursor-pointer" size="lg" variant={ theme === 'dark' ? 'outline' : 'default' } onClick={() => setTheme("light")}>
         <Sun className="scale-150" />
         Light Mode
