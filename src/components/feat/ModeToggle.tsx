@@ -7,8 +7,7 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 
 export function ModeToggle() {
-  const theme = localStorage.getItem("theme") // Ensure the theme is set in localStorage
-  const { setTheme } = useTheme()
+  const { setTheme, theme } = useTheme()
 
   return (
     <div className="flex items-center gap-2 p-2">
