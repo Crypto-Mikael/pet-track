@@ -16,8 +16,8 @@ export default async function Page() {
   }
 
   return (
-    <>
-      <main className="flex flex-col px-4 py-2">
+    <div className="min-h-dvh">
+      <main className="flex flex-col px-4 py-2 ">
         <img src={user.imageUrl} alt="User Avatar" className="self-center w-32 h-32 rounded-full mb-4" />
         <h1 className="text-2xl font-bold text-foreground">{user.fullName}</h1>
         <p className="text-lg text-muted-foreground">
@@ -59,6 +59,6 @@ export default async function Page() {
           <ModeToggle />
         </div>
       </section>
-    </>
+    </div>
   );
 }

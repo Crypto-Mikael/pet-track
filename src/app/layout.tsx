@@ -21,17 +21,19 @@ export default function RootLayout({
   return (
     <ClerkProvider localization={ptBR}>
       <html suppressHydrationWarning lang="pt-BR" className='bg-background'>
-        <body suppressHydrationWarning>
+        <body suppressHydrationWarning className='flex  flex-col h-dvh'>
           <ThemeProvider 
             attribute="class" 
             defaultTheme="system" 
             enableSystem 
             disableTransitionOnChange
           >
+            <div className='flex flex-col flex-1'>
+            {children}
+            </div>
             <SignedIn>
               <NavBar />
             </SignedIn>
-            {children}
           </ThemeProvider>
         </body>
       </html>

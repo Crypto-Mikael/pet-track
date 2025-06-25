@@ -17,7 +17,7 @@ export default function NavBar() {
   const pathName = usePathname();
 
   return (
-    <nav className="fixed w-full flex justify-center bottom-0 bg-background z-50">
+    <nav className="sticky w-full flex justify-around bottom-0 bg-background z-50">
       <div className="px-1 py-4 w-full gap-4 flex justify-evenly border-t-1 border-t-border">
         {navItems.map(({ href, icon: Icon }) => (
           <Button
