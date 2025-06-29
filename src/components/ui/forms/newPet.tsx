@@ -59,7 +59,7 @@ export default function NewPetForm() {
   };
 
   return (
-    <main className="flex items-center flex-col gap-6 p-6">
+    <>
       <ImageCropper
         className="flex flex-col"
         label="Selecione uma imagem do pet"
@@ -191,6 +191,6 @@ export default function NewPetForm() {
         {/* Botão */}
         <Button type="submit" className="w-full">Salvar</Button>
       </form>
-    </main>
+    </>
   );
 }
