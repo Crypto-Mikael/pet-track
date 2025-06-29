@@ -35,9 +35,9 @@ model User {
 model Pet {
   id           Int           @id @default(autoincrement())
   name         String
-  species      String
-  breed        String?
-  age          Int?
+  details      String?
+  breed        String
+  age          DateTime
   owner_id     Int
   owner        User          @relation(fields: [owner_id], references: [id])
   vaccinations Vaccination[]

@@ -1,19 +1,25 @@
-import { LucideProps } from "lucide-react";
-import { ForwardRefExoticComponent, RefAttributes } from "react";
+import { Bubbles, Syringe } from "lucide-react";
+import Image from "next/image";
 
-type CardCountProps = {
-  subject: string;
-  count: number;
-  text: string;
-  Icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>;
-};
-
-export default function CardCount({ subject, count, text, Icon }: CardCountProps) {
+export default function CardPet() {
   return (
-    <div className='relative bg-card border-2 border-border p-4 pl-11 rounded-2xl'>
-      <Icon className="absolute flex left-3 top-[28px] transform -translate-y-1/2 text-card-foreground" />
-      <h2 className="text-lg font-semibold text-card-foreground">{count}</h2>
-      <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
+    <article className='flex relative bg-card border-2 border-border rounded-2xl h-28'>
+      <Image className="rounded-l-2xl aspect-square" alt="Sol" width={112} height={112} src="/Sol.jpeg" />
+      <div className="p-4 flex flex-col justify-between w-full">
+        <h2 className="text-lg font-semibold text-card-foreground">Sol</h2>
+        <p className="text-sm text-muted-foreground">Teste</p>
+        <div className="flex self-end">
+          <span className="flex gap-2 text-foreground">
+            <Bubbles />
+            <p>1d</p>
+          </span>
+          <span className="flex gap-2 ml-4 text-foreground">
+            <Syringe />
+            <p>1d</p>
+          </span>
+        </div>
+
+      </div>
+    </article>
   )
 }
