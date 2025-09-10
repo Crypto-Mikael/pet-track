@@ -27,16 +27,17 @@ model User {
   email     String
   createdAt DateTime @default(now())
   updatedAt DateTime
-  Pet       Pet[]
+  Pet       Animal[]
 
   @@map(name: "users")
 }
 
-model Pet {
+model Animal {
   id           Int           @id @default(autoincrement())
   name         String
   details      String?
   breed        String
+  imageUrl     String?
   age          DateTime
   owner_id     Int
   owner        User          @relation(fields: [owner_id], references: [id])
@@ -44,14 +45,14 @@ model Pet {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime
 
-  @@map(name: "pets")
+  @@map(name: "animal")
 }
 
 model Vaccination {
   id           Int      @id @default(autoincrement())
   pet_id       Int
   vaccine_name String
-  pet          Pet      @relation(fields: [pet_id], references: [id])
+  animal       Animal   @relation(fields: [pet_id], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime
 

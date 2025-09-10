@@ -1,7 +1,9 @@
+'use client';
 import CardCount from "@/components/ui/cardCount";
 import { Bird, Cat, Dog, PawPrint } from "lucide-react";
 
-export default async function Home() {
+export default function Home() {
+  // Replace 'userId' with the actual user ID you want to query
   return (
     <>
       <h1 className="text-3xl text-foreground text-center border-b-2 border-border py-2">Home</h1>

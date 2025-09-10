@@ -2,7 +2,6 @@ import { ModeToggle } from '@/components/feat/ModeToggle';
 import { Button } from '@/components/ui/button';
 import { currentUser } from '@clerk/nextjs/server'
 import { intlFormat } from "date-fns";
-import { Pencil } from 'lucide-react';
 
 export default async function Page() {
   const user = await currentUser();
@@ -37,7 +36,7 @@ export default async function Page() {
           <h2 className="text-lg font-semibold text-card-foreground">Email</h2>
           <p className="text-sm text-muted-foreground">{ user.emailAddresses[0]?.emailAddress || "Não disponível" }</p>
         </div>
-        <div className='relative bg-card border-2 border-border p-4 rounded-2xl'>
+        {/* <div className='relative bg-card border-2 border-border p-4 rounded-2xl'>
           <h2 className="text-lg font-semibold text-card-foreground">CPF</h2>
           <p className="text-sm text-muted-foreground">{ user?.backupCodeEnabled || "Não disponível" }</p>
           <Button className="absolute right-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer" variant="secondary">
@@ -50,7 +49,7 @@ export default async function Page() {
           <Button className="absolute right-0 top-1/2 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer" variant="secondary">
             <Pencil />
           </Button>
-        </div>
+        </div> */}
       </section>
       <section className="flex flex-col gap-4 px-4 py-2">
         <h1 className="text-2xl font-semibold text-foreground">Preferências</h1>
@@ -58,6 +57,7 @@ export default async function Page() {
           <h2 className="text-lg font-semibold self-start text-card-foreground">Tema</h2>
           <ModeToggle />
         </div>
+        <Button className="bg-destructive border-2 border-border p-4 rounded-2xl text-3xl h-12" variant="destructive">Sair</Button>
       </section>
     </div>
   );

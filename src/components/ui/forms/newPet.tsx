@@ -33,6 +33,7 @@ const formSchema = z.object({
   details: z.string().optional(),
   breed: z.string({ required_error: "Por favor, selecione uma raça." }),
   dateOfBirth: z.date({ required_error: "Por favor, selecione a data de nascimento." }),
+  blob: z.unknown().optional(),
   gender: z.enum(["male", "female"]),
 });
 
@@ -42,6 +43,7 @@ export default function NewPetForm() {
   const {
     control, // Use control for Controller component
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -49,13 +51,34 @@ export default function NewPetForm() {
       name: "",
       details: "",
       breed: "vira-lata",
+      blob: null,
       gender: "male",
     },
   });
 
-  const onSubmit = (data: FormValues) => {
-    const age = new Date().getFullYear() - data.dateOfBirth.getFullYear();
-    console.log("Calculated Age:", age);
+  const onSubmit = async ({ name, details, breed, dateOfBirth, blob }: FormValues) => {
+    const body = new FormData();
+    body.append("name", name);
+    body.append("details", details ?? "");
+    body.append("breed", breed);
+    body.append("age", dateOfBirth.toISOString());
+    if (blob instanceof Blob) body.append("blob", blob);
+    await fetch("/api/pets", {
+      method: "POST",
+      body,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to create pet");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Pet created successfully:", data);
+      })
+      .catch((error) => {
+        console.error("Error creating pet:", error);
+      });
   };
 
   return (
@@ -65,6 +88,7 @@ export default function NewPetForm() {
         label="Selecione uma imagem do pet"
         aspect={1}
         onChange={(url) => {
+          setValue("blob", url);
           console.log('Imagem cortada:', url);
         }}
       />
@@ -94,7 +118,7 @@ export default function NewPetForm() {
           {errors.details && <span className="text-destructive text-sm">{errors.details.message}</span>}
         </div>
 
-        {/* Data de Nascimento (Corrected) */}
+        {/* Data de Nascimento */}
         <div className="flex flex-col gap-2">
             <Label htmlFor="dateOfBirth">Data de Nascimento</Label>
             <Controller

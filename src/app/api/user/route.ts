@@ -1,4 +1,3 @@
-// get User by ID of ClerkID
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";

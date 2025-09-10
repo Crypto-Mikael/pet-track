@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import Image from 'next/image'
+
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,8 @@ import ReactCrop, {
 import { canvasPreview } from './canvasPreview' // Assuming this helper is in the same directory
 
 import 'react-image-crop/dist/ReactCrop.css'
+import { useUploadThing } from '@/app/api/uploadthing/utils'
 
-// --- Helper Function ---
-// It's good practice to keep utility functions separate or at the top.
 function centerAspectCrop(
   mediaWidth: number,
   mediaHeight: number,
@@ -43,16 +43,14 @@ function centerAspectCrop(
   )
 }
 
-// --- Component Props Interface ---
 interface ImageCropperProps {
   label?: string
   aspect?: number
-  onChange?: (blobUrl: string | null) => void
+  onChange?: (blob: Blob | null) => void
   className?: string
   initialPreview?: string | null
 }
 
-// --- The Component ---
 export function ImageCropper({
   label = 'Select Image',
   aspect = 1,
@@ -60,6 +58,16 @@ export function ImageCropper({
   className,
   initialPreview = null,
 }: ImageCropperProps) {
+  const { isUploading, startUpload } = useUploadThing("imageUploader", {
+    /**
+     * @see https://docs.uploadthing.com/api-reference/react#useuploadthing
+     */
+    onClientUploadComplete(res) {
+      console.log("Client upload complete", res);
+      const fileUrl = res?.[0]?.url;
+      if (fileUrl) window.location.href = fileUrl;
+    },
+  });
   // State
   const [imgSrc, setImgSrc] = useState('')
   const [preview, setPreview] = useState<string | null>(initialPreview)
@@ -106,35 +114,40 @@ export function ImageCropper({
     setCompletedCrop(convertToPixelCrop(initialCrop, width, height))
   }
 
-  const handleApplyCrop = useCallback(async () => {
-    const image = imgRef.current
-    const canvas = hiddenCanvasRef.current
-    if (!image || !canvas || !completedCrop) {
-      return
-    }
+ const handleApplyCrop = useCallback(async () => {
+  const image = imgRef.current
+  const canvas = hiddenCanvasRef.current
+  if (!image || !canvas || !completedCrop) {
+    return
+  }
 
-    setIsApplyingCrop(true)
-    try {
-      // The canvasPreview function can be intensive, so we await it
-      await canvasPreview(image, canvas, completedCrop, 1, 0)
+  setIsApplyingCrop(true)
+  try {
+    await canvasPreview(image, canvas, completedCrop, 1, 0)
 
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          console.error('Canvas is empty')
-          return
-        }
-        // Create a new URL and update the state
-        const previewUrl = URL.createObjectURL(blob)
-        setPreview(previewUrl)
-        onChange?.(previewUrl)
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        console.error("Canvas vazio")
+        return
+      }
+
+      try {
+        const file = new File([blob], "cropped.png", { type: "image/png" })
+        await startUpload([file]);
+
+        setPreview(URL.createObjectURL(file))
+        onChange?.(blob) // ou onChange?.(uploadedUrl), se preferir usar a URL no form
         resetState()
-      }, 'image/png')
-    } catch (error) {
-      console.error('Error applying crop:', error)
-      // Ensure state is reset even on error
-      resetState()
-    }
-  }, [completedCrop, onChange, resetState])
+      } catch (err) {
+        console.error("Erro ao enviar imagem:", err)
+        resetState()
+      }
+    }, "image/png")
+  } catch (error) {
+    console.error("Erro ao aplicar crop:", error)
+    resetState()
+  }
+}, [completedCrop, onChange, resetState])
 
   const handleCancelCrop = useCallback(() => {
     resetState()

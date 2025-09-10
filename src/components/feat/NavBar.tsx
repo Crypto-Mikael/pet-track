@@ -1,24 +1,24 @@
 'use client';
 
-import { Bell, Home, PawPrint, Store, User } from 'lucide-react';
+import { Home, PawPrint, User } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 const navItems = [
-  { href: '/', icon: Home },
   { href: '/pet', icon: PawPrint },
-  { href: '/shops', icon: Store },
+  { href: '/', icon: Home },
+  // { href: '/shops', icon: Store },
   { href: '/user', icon: User },
-  { href: '/news', icon: Bell },
+  // { href: '/news', icon: Bell },
 ];
 
-export default function NavBar() {
+export default function NavBar({ className }: { className?: string }) {
   const pathName = usePathname();
 
   return (
-    <nav className="sticky w-full flex justify-around bottom-0 bg-background z-50">
-      <div className="px-1 py-4 w-full gap-4 flex justify-evenly border-t-1 border-t-border">
+    <nav className={`sm:hidden sticky w-full flex justify-around bottom-0 bg-background z-50${className ? ` ${className}` : ''}`}>
+      <div className="px-1 py-4 w-full gap-4 flex justify-around border-t-1 border-t-border">
         {navItems.map(({ href, icon: Icon }) => (
           <Button
             key={href}
