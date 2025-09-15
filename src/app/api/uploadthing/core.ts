@@ -3,7 +3,6 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 
 const f = createUploadthing();
-
 export const ourFileRouter = {
   imageUploader: f({
     image: {
@@ -14,15 +13,10 @@ export const ourFileRouter = {
     .middleware(async () => {
       const user = await currentUser();
       if (!user) throw new UploadThingError("Unauthorized");
-      return { userId: user };
+      return { userId: user.id };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
-      // This code RUNS ON YOUR SERVER after upload
-      console.log("Upload complete for userId:", metadata.userId);
-
-      console.log("file url", file.ufsUrl);
-
-      return { uploadedBy: metadata.userId.id };
+    .onUploadComplete(({ metadata, file }) => {
+      return { uploadedBy: metadata.userId, fileUrl: file.ufsUrl };
     }),
 } satisfies FileRouter;
 

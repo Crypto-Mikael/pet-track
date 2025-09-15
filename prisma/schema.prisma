@@ -42,6 +42,7 @@ model Animal {
   owner_id     Int
   owner        User          @relation(fields: [owner_id], references: [id])
   vaccinations Vaccination[]
+  baths        Bath[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime
 
@@ -57,4 +58,16 @@ model Vaccination {
   updatedAt    DateTime
 
   @@map(name: "vaccinations")
+}
+
+model Bath {
+  id        Int      @id @default(autoincrement())
+  pet_id    Int
+  animal    Animal   @relation(fields: [pet_id], references: [id])
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@map(name: "baths")
 }

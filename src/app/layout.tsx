@@ -20,7 +20,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider localization={ptBR}>
+    <ClerkProvider 
+      localization={ptBR}
+    >
       <html suppressHydrationWarning lang="pt-BR" className='bg-background'>
         <body suppressHydrationWarning className='h-dvh flex flex-col'>
           <ThemeProvider 

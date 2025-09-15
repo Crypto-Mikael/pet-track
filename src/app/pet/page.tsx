@@ -13,7 +13,7 @@ export default async function Page() {
       <main className="flex flex-col gap-4 p-4">
         <CardNew />
         {animals?.map(animal => (
-          <CardPet key={animal.id} name={animal.name} details={animal.details ?? ''} />
+          <CardPet key={animal.id} name={animal.name} details={animal.details ?? ''} imageUrl={animal.imageUrl}/>
         ))}
       </main>
     </>

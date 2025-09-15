@@ -18,13 +18,49 @@ import { Calendar } from "@/components/ui/calendar";
 
 import { CalendarIcon, Mars, Venus } from "lucide-react";
 import { ImageCropper } from "../input/imageCropper";
+import { useUploadThing } from "@/app/api/uploadthing/utils";
 
-// 🐶 Opções de Raças
-const dogBreeds = [
+export const dogBreeds = [
   { label: "Vira-lata (SRD)", value: "vira-lata" },
   { label: "Labrador Retriever", value: "labrador" },
   { label: "Golden Retriever", value: "golden" },
-  // ... (rest of the breeds)
+  { label: "Pastor Alemão", value: "pastor-alemao" },
+  { label: "Bulldog Inglês", value: "bulldog-ingles" },
+  { label: "Bulldog Francês", value: "bulldog-frances" },
+  { label: "Poodle", value: "poodle" },
+  { label: "Shih Tzu", value: "shih-tzu" },
+  { label: "Yorkshire Terrier", value: "yorkshire" },
+  { label: "Beagle", value: "beagle" },
+  { label: "Rottweiler", value: "rottweiler" },
+  { label: "Pit Bull", value: "pitbull" },
+  { label: "Dachshund (Salsicha)", value: "dachshund" },
+  { label: "Boxer", value: "boxer" },
+  { label: "Chihuahua", value: "chihuahua" },
+  { label: "Maltês", value: "maltes" },
+  { label: "Cocker Spaniel", value: "cocker-spaniel" },
+  { label: "Husky Siberiano", value: "husky" },
+  { label: "Border Collie", value: "border-collie" },
+  { label: "Pug", value: "pug" },
+];
+
+export const catBreeds = [
+  { label: "Sem Raça Definida (SRD)", value: "srd" },
+  { label: "Persa", value: "persa" },
+  { label: "Siamês", value: "siames" },
+  { label: "Maine Coon", value: "maine-coon" },
+  { label: "Sphynx (Gato sem pelo)", value: "sphynx" },
+  { label: "Angorá", value: "angora" },
+  { label: "Ragdoll", value: "ragdoll" },
+  { label: "British Shorthair", value: "british-shorthair" },
+  { label: "American Shorthair", value: "american-shorthair" },
+  { label: "Bengal", value: "bengal" },
+  { label: "Norueguês da Floresta", value: "noruegues" },
+  { label: "Abissínio", value: "abissinio" },
+  { label: "Exótico de Pelo Curto", value: "exotico" },
+  { label: "Himalaio", value: "himalaio" },
+  { label: "Oriental", value: "oriental" },
+  { label: "Birmanês", value: "birmanes" },
+  { label: "Savannah", value: "savannah" },
 ];
 
 // 🎯 Schema de validação com Zod (updated)
@@ -32,19 +68,24 @@ const formSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
   details: z.string().optional(),
   breed: z.string({ required_error: "Por favor, selecione uma raça." }),
-  dateOfBirth: z.date({ required_error: "Por favor, selecione a data de nascimento." }),
+  age: z.date({ required_error: "Por favor, selecione a data de nascimento." }),
+  lastBath: z.date().optional(),
+  lastVaccine: z.date().optional(),
   blob: z.unknown().optional(),
   gender: z.enum(["male", "female"]),
+  animalType: z.enum(["dog", "cat", "other"]),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 export default function NewPetForm() {
+  const { startUpload } = useUploadThing("imageUploader");
   const {
-    control, // Use control for Controller component
+    control,
     handleSubmit,
     setValue,
     formState: { errors },
+    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,32 +94,52 @@ export default function NewPetForm() {
       breed: "vira-lata",
       blob: null,
       gender: "male",
+      animalType: "dog",
     },
   });
 
-  const onSubmit = async ({ name, details, breed, dateOfBirth, blob }: FormValues) => {
-    const body = new FormData();
-    body.append("name", name);
-    body.append("details", details ?? "");
-    body.append("breed", breed);
-    body.append("age", dateOfBirth.toISOString());
-    if (blob instanceof Blob) body.append("blob", blob);
-    await fetch("/api/pets", {
-      method: "POST",
-      body,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to create pet");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Pet created successfully:", data);
-      })
-      .catch((error) => {
-        console.error("Error creating pet:", error);
+  const uploadFile = async (file: File) => {
+    const uploaded = await startUpload([file]);
+    try {
+      if (!uploaded || uploaded.length === 0) {
+        throw new Error("Nenhum arquivo foi enviado.");
+      }
+      
+      return uploaded[0].ufsUrl;
+    } catch (error) {
+      console.error("Erro ao fazer upload do arquivo:", error);
+      throw error;
+    }
+  };
+
+  const onSubmit = async ({ name, details, breed, age, blob, lastBath, lastVaccine }: FormValues) => {
+    try {
+      // Faz o upload da imagem usando a função customizada
+      const fileUrl = await uploadFile(blob as File);
+
+      const body = {
+        name,
+        details,
+        breed,
+        age: age.toISOString(),
+        lastBath: lastBath?.toISOString(),
+        lastVaccine: lastVaccine?.toISOString(),
+        imageUrl: fileUrl,
+      };
+
+      const petResponse = await fetch("/api/pets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
+
+      if (!petResponse.ok) {
+        throw new Error("Falha ao criar o pet.");
+      }
+      window.location.href = "/pets";
+    } catch (error) {
+      console.error("Erro ao criar o pet:", error);
+    }
   };
 
   return (
@@ -89,7 +150,6 @@ export default function NewPetForm() {
         aspect={1}
         onChange={(url) => {
           setValue("blob", url);
-          console.log('Imagem cortada:', url);
         }}
       />
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 max-w-md w-full mx-auto">
@@ -120,9 +180,9 @@ export default function NewPetForm() {
 
         {/* Data de Nascimento */}
         <div className="flex flex-col gap-2">
-            <Label htmlFor="dateOfBirth">Data de Nascimento</Label>
+            <Label htmlFor="age">Data de Nascimento</Label>
             <Controller
-                name="dateOfBirth"
+                name="age"
                 control={control}
                 render={({ field }) => (
                     <Popover>
@@ -153,7 +213,7 @@ export default function NewPetForm() {
                     </Popover>
                 )}
             />
-            {errors.dateOfBirth && <span className="text-destructive text-sm">{errors.dateOfBirth.message}</span>}
+            {errors.age && <span className="text-destructive text-sm">{errors.age.message}</span>}
         </div>
 
 
@@ -188,28 +248,139 @@ export default function NewPetForm() {
           {errors.gender && <span className="text-destructive text-sm">{errors.gender.message}</span>}
         </div>
 
-        {/* Raça */}
+        {/* Tipo de Animal */}
         <div className="flex flex-col gap-2">
-          <Label>Raça</Label>
+          <Label htmlFor="animalType">Tipo de Animal</Label>
+          <Controller
+            name="animalType"
+            control={control}
+            defaultValue="dog"
+            render={({ field }) => (
+              <RadioGroup
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  setValue("breed", value === "other" ? "undefined" : value === "dog" ? dogBreeds[0].value : catBreeds[0].value);
+                }}
+                value={field.value}
+                className="flex gap-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="dog" id="dog" />
+                  <Label htmlFor="dog" className="cursor-pointer">Cachorro</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="cat" id="cat" />
+                  <Label htmlFor="cat" className="cursor-pointer">Gato</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="other" id="other" />
+                  <Label htmlFor="other" className="cursor-pointer">Outro</Label>
+                </div>
+              </RadioGroup>
+            )}
+          />
+
+          {/* Raça */}
+          {watch("animalType") !== "other" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="breed">Raça</Label>
             <Controller
-                name="breed"
+              name="breed"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma raça" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(watch("animalType") === "dog" ? dogBreeds : catBreeds).map((breed) => (
+                      <SelectItem key={breed.value} value={breed.value}>
+                        {breed.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.breed && <span className="text-destructive text-sm">{errors.breed.message}</span>}
+          </div>
+        )}
+        </div>
+
+        {/* Último Banho */}
+        <div className="flex flex-col gap-2">
+            <Label htmlFor="lastBath">Último Banho</Label>
+            <Controller
+                name="lastBath"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione uma raça" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dogBreeds.map((breed) => (
-                          <SelectItem key={breed.value} value={breed.value}>
-                          {breed.label}
-                          </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? (
+                                    format(field.value, "PPP", { locale: ptBR })
+                                ) : (
+                                    <span>Selecione uma data</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date > new Date() || date < new Date("1990-01-01")
+                                }
+                                captionLayout="dropdown"
+                            />
+                        </PopoverContent>
+                    </Popover>
                 )}
             />
-          {errors.breed && <span className="text-destructive text-sm">{errors.breed.message}</span>}
+            {errors.lastBath && <span className="text-destructive text-sm">{errors.lastBath.message}</span>}
+        </div>
+
+        {/* Última Vacina */}
+        <div className="flex flex-col gap-2">
+            <Label htmlFor="lastVaccine">Última Vacina</Label>
+            <Controller
+                name="lastVaccine"
+                control={control}
+                render={({ field }) => (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? (
+                                    format(field.value, "PPP", { locale: ptBR })
+                                ) : (
+                                    <span>Selecione uma data</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date > new Date() || date < new Date("1990-01-01")
+                                }
+                                captionLayout="dropdown"
+                            />
+                        </PopoverContent>
+                    </Popover>
+                )}
+            />
+            {errors.lastVaccine && <span className="text-destructive text-sm">{errors.lastVaccine.message}</span>}
         </div>
 
         {/* Botão */}

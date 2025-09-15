@@ -18,10 +18,9 @@ import ReactCrop, {
   PixelCrop,
   convertToPixelCrop,
 } from 'react-image-crop'
-import { canvasPreview } from './canvasPreview' // Assuming this helper is in the same directory
+import { canvasPreview } from './canvasPreview'
 
 import 'react-image-crop/dist/ReactCrop.css'
-import { useUploadThing } from '@/app/api/uploadthing/utils'
 
 function centerAspectCrop(
   mediaWidth: number,
@@ -46,7 +45,7 @@ function centerAspectCrop(
 interface ImageCropperProps {
   label?: string
   aspect?: number
-  onChange?: (blob: Blob | null) => void
+  onChange?: (file: File | null) => void // ✅ agora retorna File
   className?: string
   initialPreview?: string | null
 }
@@ -58,16 +57,6 @@ export function ImageCropper({
   className,
   initialPreview = null,
 }: ImageCropperProps) {
-  const { isUploading, startUpload } = useUploadThing("imageUploader", {
-    /**
-     * @see https://docs.uploadthing.com/api-reference/react#useuploadthing
-     */
-    onClientUploadComplete(res) {
-      console.log("Client upload complete", res);
-      const fileUrl = res?.[0]?.url;
-      if (fileUrl) window.location.href = fileUrl;
-    },
-  });
   // State
   const [imgSrc, setImgSrc] = useState('')
   const [preview, setPreview] = useState<string | null>(initialPreview)
@@ -89,7 +78,6 @@ export function ImageCropper({
     setModalOpen(false)
     setIsApplyingCrop(false)
 
-    // Reset the file input so the same file can be selected again
     if (inputFileRef.current) {
       inputFileRef.current.value = ''
     }
@@ -114,40 +102,40 @@ export function ImageCropper({
     setCompletedCrop(convertToPixelCrop(initialCrop, width, height))
   }
 
- const handleApplyCrop = useCallback(async () => {
-  const image = imgRef.current
-  const canvas = hiddenCanvasRef.current
-  if (!image || !canvas || !completedCrop) {
-    return
-  }
+  const handleApplyCrop = useCallback(async () => {
+    const image = imgRef.current
+    const canvas = hiddenCanvasRef.current
+    if (!image || !canvas || !completedCrop) {
+      return
+    }
 
-  setIsApplyingCrop(true)
-  try {
-    await canvasPreview(image, canvas, completedCrop, 1, 0)
+    setIsApplyingCrop(true)
+    try {
+      await canvasPreview(image, canvas, completedCrop, 1, 0)
 
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        console.error("Canvas vazio")
-        return
-      }
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          console.error('Canvas vazio')
+          return
+        }
 
-      try {
-        const file = new File([blob], "cropped.png", { type: "image/png" })
-        await startUpload([file]);
+        // ✅ Converter Blob em File
+        const file = new File([blob], 'cropped-image.png', {
+          type: blob.type,
+          lastModified: Date.now(),
+        })
 
-        setPreview(URL.createObjectURL(file))
-        onChange?.(blob) // ou onChange?.(uploadedUrl), se preferir usar a URL no form
+        onChange?.(file)
+        setPreview(URL.createObjectURL(blob))
         resetState()
-      } catch (err) {
-        console.error("Erro ao enviar imagem:", err)
-        resetState()
-      }
-    }, "image/png")
-  } catch (error) {
-    console.error("Erro ao aplicar crop:", error)
-    resetState()
-  }
-}, [completedCrop, onChange, resetState])
+      }, 'image/png')
+    } catch (error) {
+      console.error('Erro ao aplicar crop:', error)
+      resetState()
+    } finally {
+      setIsApplyingCrop(false)
+    }
+  }, [completedCrop, onChange, resetState])
 
   const handleCancelCrop = useCallback(() => {
     resetState()
@@ -155,7 +143,6 @@ export function ImageCropper({
 
   const handleRemoveImage = useCallback(() => {
     if (preview) {
-      // Revoke the old URL before setting the new one
       URL.revokeObjectURL(preview)
     }
     setPreview(null)
@@ -164,9 +151,7 @@ export function ImageCropper({
   }, [preview, onChange, resetState])
 
   // --- Effects ---
-  // [CRITICAL] Memory Leak Prevention: Revoke the object URL when the component unmounts or the preview changes.
   useEffect(() => {
-    // This function will be called when the component unmounts
     return () => {
       if (preview && preview.startsWith('blob:')) {
         URL.revokeObjectURL(preview)
@@ -187,7 +172,7 @@ export function ImageCropper({
             className="w-full h-full object-cover"
             width={160}
             height={160}
-            unoptimized // Necessary for blob URLs
+            unoptimized
           />
         ) : (
           <span className="text-muted-foreground text-center px-2">{label}</span>
@@ -231,9 +216,9 @@ export function ImageCropper({
                 alt="Image to crop"
                 src={imgSrc}
                 onLoad={onImageLoad}
-                width={800} // Use a larger base width for better quality in the modal
+                width={800}
                 height={600}
-                style={{ maxHeight: '70vh', width: 'auto' }} // Constrain display size
+                style={{ maxHeight: '70vh', width: 'auto' }}
                 unoptimized
               />
             </ReactCrop>
@@ -250,7 +235,6 @@ export function ImageCropper({
         </DialogContent>
       </Dialog>
 
-      {/* This canvas is used for generating the cropped image and is not displayed */}
       <canvas ref={hiddenCanvasRef} style={{ display: 'none' }} />
     </div>
   )
