@@ -112,7 +112,7 @@ export default function NewPetForm() {
     }
   };
 
-  const onSubmit = async ({ name, details, breed, age, blob, lastBath, lastVaccine }: FormValues) => {
+  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, lastVaccine }: FormValues) => {
     try {
       // Faz o upload da imagem usando a função customizada
       const fileUrl = await uploadFile(blob as File);
@@ -121,6 +121,7 @@ export default function NewPetForm() {
         name,
         details,
         breed,
+        gender,
         age: age.toISOString(),
         lastBath: lastBath?.toISOString(),
         lastVaccine: lastVaccine?.toISOString(),

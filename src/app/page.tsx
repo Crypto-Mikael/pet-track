@@ -1,29 +1,18 @@
-'use client';
 import CardCount from "@/components/ui/cardCount";
-import { Bird, Cat, Dog, PawPrint } from "lucide-react";
+import prisma from "@/lib/prisma";
+import { currentUser } from "@clerk/nextjs/server";
 
-export default function Home() {
-  // Replace 'userId' with the actual user ID you want to query
+export default async function Home() {
+  const clerkUser = await currentUser();
+  const userPrisma = await prisma.user.findFirst({ where: { clerkId: clerkUser?.id } });
+  const animal = await prisma.animal.findFirst({ where: { owner_id: userPrisma?.id } });
   return (
     <>
       <h1 className="text-3xl text-foreground text-center border-b-2 border-border py-2">Home</h1>
-      <section className="flex flex-col gap-4 p-4">
-        <h2 className="text-2xl font-semibold text-foreground">Visão Geral</h2>
-        <div className="grid grid-cols-2 gap-4 ">
-          <CardCount text="Pets" Icon={PawPrint} count={0} />
-          <CardCount text="Cachorros" Icon={Dog} count={0} />
-          <CardCount text="Gatos" Icon={Cat} count={0} />
-          <CardCount text="Outros" Icon={Bird} count={0} />
-        </div>
-      </section>
-      <main className="flex flex-col gap-4 p-4">
-        <h2 className="text-2xl font-semibold text-foreground">Atualizações</h2>
-        <div className="grid grid-cols-2 gap-4 ">
-          <CardCount text="Pets" Icon={PawPrint} count={0} />
-          <CardCount text="Cachorros" Icon={Dog} count={0} />
-          <CardCount text="Gatos" Icon={Cat} count={0} />
-          <CardCount text="Outros" Icon={Bird} count={0} />
-        </div>
+      <main className="flex flex-col">
+        {animal && (
+          <CardCount animal={animal} />
+        )}
       </main>
     </>
   );

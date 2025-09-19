@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         details: body.details,
         breed: body.breed,
+        gender: body.gender,
         age: new Date(body.age),
         imageUrl: body.imageUrl,
         owner_id: user.id,

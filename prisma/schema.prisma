@@ -8,6 +8,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums
+
+enum Gender {
+  male
+  female
+}
+
+// Models
 model Store {
   id      Int     @id @default(autoincrement())
   name    String
@@ -38,6 +46,7 @@ model Animal {
   details      String?
   breed        String
   imageUrl     String?
+  gender       Gender
   age          DateTime
   owner_id     Int
   owner        User          @relation(fields: [owner_id], references: [id])
