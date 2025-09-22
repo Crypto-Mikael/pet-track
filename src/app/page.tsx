@@ -1,19 +1,52 @@
+"use client";
+import { useEffect, useState } from "react";
+import { Animal } from "./generated/prisma";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight, PencilIcon } from "lucide-react";
 import CardCount from "@/components/ui/cardCount";
-import prisma from "@/lib/prisma";
-import { currentUser } from "@clerk/nextjs/server";
 
-export default async function Home() {
-  const clerkUser = await currentUser();
-  const userPrisma = await prisma.user.findFirst({ where: { clerkId: clerkUser?.id } });
-  const animal = await prisma.animal.findFirst({ where: { owner_id: userPrisma?.id } });
+
+export default function Home() {
+    const [animals, setAnimals] = useState<Animal[]>([]);
+    const [tabNumber, setTabNumber] = useState(0);
+
+    useEffect(() => {
+      async function fetchData() {
+        try {
+          const animalResponse = await fetch(`/api/pets`);
+          const animalData = await animalResponse.json();
+          setAnimals(animalData);
+          console.log("Fetched animals:", animalData);
+        } catch (error) {
+          console.error("Erro ao buscar dados:", error);
+        }
+      }
+    fetchData();
+  }, []);
+
   return (
-    <>
-      <h1 className="text-3xl text-foreground text-center border-b-2 border-border py-2">Home</h1>
-      <main className="flex flex-col">
-        {animal && (
-          <CardCount animal={animal} />
-        )}
+      <main className="flex flex-col h-full">
+        { animals.length && (
+          <>       
+          <div className="px-4 py-2 flex w-full justify-between items-center">
+        <Button variant="ghost" size="icon" onClick={() => setTabNumber(tabNumber - 1)} className={tabNumber !== 0 ? "" : "invisible"}>
+          <ArrowLeft />
+        </Button>
+        <Button variant="ghost" size="icon" className="text-2xl font-semibold w-48 text-foreground">
+          {animals[tabNumber]?.name ?? 'No Pets'}
+          <PencilIcon className="scale-130" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setTabNumber(tabNumber + 1)} className={tabNumber === 0 ? "" : "invisible"}>
+          <ArrowRight />
+        </Button>
+      </div>
+      <CardCount animal={animals[tabNumber]} />
+
+      </>
+      )}
+      
       </main>
-    </>
   );
 }
+
+

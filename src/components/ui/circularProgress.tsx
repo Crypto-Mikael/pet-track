@@ -6,6 +6,7 @@ interface CircularProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value: number // de 0 a 100
   icon?: LucideIcon
   size?: number
+  textValue?: string
   gapAngle?: number // ângulo do espaço em branco (em graus)
 }
 
@@ -15,6 +16,7 @@ export function CircularProgress({
   size = 80,
   gapAngle = 60,
   className,
+  textValue,
   ...props
 }: CircularProgressProps) {
   const stroke = 8
@@ -30,52 +32,62 @@ export function CircularProgress({
     effectiveCircumference - (value / 100) * effectiveCircumference
 
   return (
-    <div
-      className={cn("relative flex items-center justify-center", className)}
-      style={{ width: size, height: size }}
-      {...props}
-    >
-      {/* Aqui rotacionamos para que o gap fique embaixo */}
-      <svg width={size} height={size} className="rotate-120">
-        {/* Trilha */}
-        <circle
-          className="text-muted"
-          stroke="currentColor"
-          fill="transparent"
-          strokeWidth={stroke}
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-          strokeDasharray={effectiveCircumference}
-          strokeDashoffset={0}
-          strokeLinecap="round"
-        />
-        {/* Progresso */}
-        <circle
-          className={
-            "transition-all duration-300 " +
-            (value > 80
-              ? "text-primary"
-              : value > 40
-              ? "text-accent"
-              : "text-destructive")
-          }
-          stroke="currentColor"
-          fill="transparent"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={effectiveCircumference}
-          strokeDashoffset={strokeDashoffset}
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-      </svg>
+    <div className="flex flex-col items-center justify-center">
+      <div
+        className={cn("relative flex items-center justify-center", className)}
+        style={{ width: size, height: size }}
+        {...props}
+      >
+        {/* Aqui rotacionamos para que o gap fique embaixo */}
+        <svg width={size} height={size} className="rotate-120">
+          {/* Trilha */}
+          <circle
+            className="text-muted"
+            stroke="currentColor"
+            fill="transparent"
+            strokeWidth={stroke}
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+            strokeDasharray={effectiveCircumference}
+            strokeDashoffset={0}
+            strokeLinecap="round"
+          />
+          {/* Progresso */}
+          <circle
+            className={
+              "transition-all duration-300 " +
+              (value > 80
+                ? "text-primary"
+                : value > 40
+                ? "text-accent"
+                : "text-destructive")
+            }
+            stroke="currentColor"
+            fill="transparent"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={effectiveCircumference}
+            strokeDashoffset={strokeDashoffset}
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+          />
+        </svg>
 
-      {/* Ícone central */}
-      <div className="absolute flex items-center justify-center">
-        <Icon className="w-6 h-6 text-primary" />
+        {/* Ícone central */}
+        <div className="absolute flex items-center justify-center">
+          <Icon className={"w-6 h-6 scale-150 text-primary " +
+              (value > 80
+                ? "text-primary"
+                : value > 40
+                ? "text-accent"
+                : "text-destructive")}  />
+                
+        </div>
       </div>
+      <p className="text-foreground text-3xl font-bold">{value}</p>
+      <p className="text-foreground text-base font-semibold">{textValue}</p>
     </div>
   )
 }

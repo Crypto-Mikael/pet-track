@@ -1,5 +1,5 @@
 import CardNew from "@/components/ui/cardNew";
-import CardPet from "@/components/ui/cardPet";
+import ListItem from "@/components/ui/listItem";
 import prisma from "@/lib/prisma";
 import { currentUser } from "@clerk/nextjs/server";
 
@@ -13,7 +13,7 @@ export default async function Page() {
       <main className="flex flex-col gap-4 p-4">
         <CardNew />
         {animals?.map(animal => (
-          <CardPet key={animal.id} name={animal.name} details={animal.details ?? ''} imageUrl={animal.imageUrl}/>
+          <ListItem key={animal.id} name={animal.name} details={animal.details ?? ''} imageUrl={animal.imageUrl}/>
         ))}
       </main>
     </>

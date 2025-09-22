@@ -47,5 +47,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  return new NextResponse("BOMBA", { status: 200 });
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+  const animals = await prisma.animal.findMany({
+    where: { owner: { clerkId: clerkUser.id } },
+  });
+  return NextResponse.json(animals, { status: 200 });
 }

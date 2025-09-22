@@ -1,9 +1,8 @@
 import { Animal } from "@/app/generated/prisma";
-import { Progress } from "./progress";
 
 import Image from "next/image";
 
-import { Mars, Venus } from "lucide-react";
+import { Mars, ShowerHead, Syringe, Venus } from "lucide-react";
 type CardCountProps = {
   animal: Animal;
 };
@@ -34,23 +33,25 @@ function getAnimalAge(birthDate: Date): string {
 
 export default function CardCount({ animal }: CardCountProps) {
   return (
-    <div className='flex flex-col items-center p-8 gap-4'>
+    <div className='flex flex-col items-center p-8 gap-4 h-full'>
         <Image
           src={animal.imageUrl ?? ""}
           alt={animal.name || "Animal image"}
-          width={200}
-          height={200}
+          width={235}
+          height={235}
           className="rounded-full border-6 border-border"
         />
-        <div className="flex flex-col items-center">
-          <div className="flex gap-1 items-center">
-            <h1 className="text-3xl text-foreground">{animal.name}</h1>
-            <small className="text-foreground">{animal.gender === 'male' ? <Mars /> : <Venus /> } </small>
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-end relative">
+            <h1 className="text-6xl text-foreground font-semibold">{getAnimalAge(animal.age).split(' ')[0]}</h1>
           </div>
-          <small className="self-start text-foreground">Idade: {getAnimalAge(animal.age)}</small>
+          <p className="text-foreground text-3xl font-semibold capitalize">{getAnimalAge(animal.age).split(' ')[1]}</p>
         </div>
-        <div className="h-42">
-          <CircularProgress className="" value={100} />
+        <div className="flex flex-col h-full gap-16 items-center pt-8">
+          <div className="flex gap-16">
+            <CircularProgress textValue="Banho" value={100} icon={ShowerHead} />
+            <CircularProgress textValue="Vacina" value={100} icon={Syringe} />
+          </div>  
         </div>
     </div>
   )
