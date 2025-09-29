@@ -60,7 +60,7 @@ export function CircularProgress({
               (value > 80
                 ? "text-primary"
                 : value > 40
-                ? "text-accent"
+                ? "text-amber-400"
                 : "text-destructive")
             }
             stroke="currentColor"
@@ -77,17 +77,17 @@ export function CircularProgress({
 
         {/* Ícone central */}
         <div className="absolute flex items-center justify-center">
-          <Icon className={"w-6 h-6 scale-150 text-primary " +
+          <Icon className={"w-6 h-6 scale-150 " +
               (value > 80
                 ? "text-primary"
                 : value > 40
-                ? "text-accent"
+                ? "text-amber-400"
                 : "text-destructive")}  />
                 
         </div>
       </div>
-      <p className="text-foreground text-3xl font-bold">{value}</p>
-      <p className="text-foreground text-base font-semibold">{textValue}</p>
+      <p className="text-foreground text-3xl font-bold">{value}%</p>
+      <p className="text-foreground text-xl font-semibold">{textValue}</p>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { Animal } from "@/app/generated/prisma";
 
 import Image from "next/image";
 
-import { Mars, ShowerHead, Syringe, Venus } from "lucide-react";
+import { Cookie, Mars, ShowerHead, Syringe, Venus } from "lucide-react";
 type CardCountProps = {
   animal: Animal;
 };
@@ -13,6 +13,7 @@ import {
   differenceInDays,
 } from "date-fns";
 import { CircularProgress } from "./circularProgress";
+import { Skeleton } from "./skeleton";
 
 function getAnimalAge(birthDate: Date): string {
   const now = new Date();
@@ -33,26 +34,26 @@ function getAnimalAge(birthDate: Date): string {
 
 export default function CardCount({ animal }: CardCountProps) {
   return (
-    <div className='flex flex-col items-center p-8 gap-4 h-full'>
-        <Image
-          src={animal.imageUrl ?? ""}
-          alt={animal.name || "Animal image"}
-          width={235}
-          height={235}
-          className="rounded-full border-6 border-border"
-        />
-        <div className="flex flex-col items-center text-center">
-          <div className="flex items-end relative">
-            <h1 className="text-6xl text-foreground font-semibold">{getAnimalAge(animal.age).split(' ')[0]}</h1>
+      <div className='flex flex-col items-center p-8 gap-4 h-full'>
+          { animal ? (<Image
+            src={animal.imageUrl ?? ""}
+            alt={animal.name || "Animal image"}
+            width={240}
+            height={240}
+            className="rounded-full border-6 border-border"
+          />) : <Skeleton className="rounded-full h-[480px] w-60" /> }
+            <div>
+              { animal ? (<h1 className="text-6xl text-center text-foreground font-semibold">{getAnimalAge(animal.age).split(' ')[0]}</h1>) : <Skeleton className="h-15 w-20 rounded-full" /> }
+            { animal ? (<p className="text-foreground text-center text-3xl font-semibold capitalize">{getAnimalAge(animal.age).split(' ')[1]}</p>
+) : <Skeleton className="rounded-full h-[30px] w-full mt-1" /> }
+</div>
+          <div className="flex flex-col h-full gap-16 items-center pt-8">
+            <div className="flex gap-8">
+              <CircularProgress textValue="Banho" value={30} icon={ShowerHead} />
+              <CircularProgress textValue="Comida" value={60} icon={Cookie} />
+              <CircularProgress textValue="Vacina" value={100} icon={Syringe} />
+            </div>  
           </div>
-          <p className="text-foreground text-3xl font-semibold capitalize">{getAnimalAge(animal.age).split(' ')[1]}</p>
-        </div>
-        <div className="flex flex-col h-full gap-16 items-center pt-8">
-          <div className="flex gap-16">
-            <CircularProgress textValue="Banho" value={100} icon={ShowerHead} />
-            <CircularProgress textValue="Vacina" value={100} icon={Syringe} />
-          </div>  
-        </div>
-    </div>
+      </div>
   )
 }
