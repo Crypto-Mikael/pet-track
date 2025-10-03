@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    if (!body.name || !body.breed || !body.age) {
+    if (!body.name || !body.breed || !body.age || !body.lastBath) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
     const user = await prisma.user.findUnique({
@@ -46,13 +46,37 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  const clerkUser = await currentUser();
-  if (!clerkUser) {
-    return new NextResponse("Unauthorized", { status: 401 });
+export async function GET(request: NextRequest) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const petId = searchParams.get("id");
+
+    if (petId) {
+      // Buscar pet por ID
+      const pet = await prisma.animal.findUnique({
+        where: { id: Number(petId) },
+      });
+
+      if (!pet) {
+        return new NextResponse("Pet not found", { status: 404 });
+      }
+
+      return NextResponse.json(pet, { status: 200 });
+    }
+
+    // Buscar todos os pets do usuário
+    const animals = await prisma.animal.findMany({
+      where: { owner: { clerkId: clerkUser.id } },
+    });
+
+    return NextResponse.json(animals, { status: 200 });
+  } catch (error) {
+    console.error("Failed to fetch pets:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-  const animals = await prisma.animal.findMany({
-    where: { owner: { clerkId: clerkUser.id } },
-  });
-  return NextResponse.json(animals, { status: 200 });
 }

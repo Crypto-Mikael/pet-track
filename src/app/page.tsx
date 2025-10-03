@@ -26,7 +26,7 @@ export default function Home() {
 
   return (
     <>
-      <header className="px-4 sticky top-0 py-2 flex w-full justify-between items-center bg-background/30 backdrop-blur-xs">
+      <div className="px-4 sticky top-0 py-2 flex w-full justify-between items-center bg-background/30 backdrop-blur-xs">
         <Button variant="ghost" size="icon" onClick={() => setTabNumber(tabNumber - 1)} className={tabNumber !== 0 ? "" : "invisible"}>
           <ArrowLeft />
         </Button>
@@ -36,12 +36,12 @@ export default function Home() {
         <Button disabled={animals.length ? false : true} variant="ghost" size="icon" onClick={() => setTabNumber(tabNumber + 1)} className={tabNumber === 0 ? "" : "invisible"}>
           <ArrowRight />
         </Button>
-      </header>
+      </div>
       <main className="flex flex-col">
         <CardCount animal={animals[tabNumber]} />
       </main>
       <section className="flex flex-col p-4 gap-4">
-        <a href="/bath" className="border-border flex bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
+        <a href={`/bath/${animals[tabNumber]?.id}`} className="border-border flex bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
           <div className="flex flex-col gap-2 relative items-center justify-center px-4">
             <ShowerHead className="size-12 text-card-foreground rounded-full" />
             <p className="absolute bottom-1 text-xs">14/09/2025</p>
