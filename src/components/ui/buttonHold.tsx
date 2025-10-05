@@ -46,6 +46,8 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
   return (
     <Button
       onMouseDown={handleMouseDown}
+      onTouchStart={handleMouseDown}
+      onTouchEnd={handleMouseUp}
       onMouseUp={handleMouseUp}
       className="relative h-12 font-bold overflow-hidden"
       variant="outline"

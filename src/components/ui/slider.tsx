@@ -43,7 +43,7 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                 {
                     labelFor && labelTitle &&
                     <Label htmlFor={labelFor} className="justify-between pl-0.5 text-muted-foreground">
-                        <span>{labelTitle}</span><span>{labelValue}</span></Label>
+                        <span className="text-xl text-foreground">{labelTitle}</span><span >{labelValue} {labelValue === 1 ? 'semana' : 'semanas'}</span></Label>
                 }
 
                 <SliderPrimitive.Root

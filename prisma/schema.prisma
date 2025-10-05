@@ -41,19 +41,20 @@ model User {
 }
 
 model Animal {
-  id           Int           @id @default(autoincrement())
-  name         String
-  details      String?
-  breed        String
-  imageUrl     String?
-  gender       Gender
-  age          DateTime
-  owner_id     Int
-  owner        User          @relation(fields: [owner_id], references: [id])
-  vaccinations Vaccination[]
-  baths        Bath[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime
+  id             Int           @id @default(autoincrement())
+  name           String
+  details        String?
+  breed          String
+  imageUrl       String?
+  gender         Gender
+  age            DateTime
+  owner_id       Int
+  owner          User          @relation(fields: [owner_id], references: [id])
+  vaccinations   Vaccination[]
+  bathsCycleDays Int           @default(28) // intervalo ideal em dias
+  baths          Bath[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime
 
   @@map(name: "animal")
 }

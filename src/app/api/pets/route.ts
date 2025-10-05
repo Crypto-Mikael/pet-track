@@ -80,3 +80,38 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
+
+export async function PUT(request: NextRequest) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const petId = Number(searchParams.get("id"));
+    const bathsCycleDays = Number(searchParams.get("bathsCycleDays"));
+
+    if (!petId) {
+      return new NextResponse("Pet ID required", { status: 404 });
+    }
+
+    const pet = await prisma.animal.findFirst({
+      where: { id: petId },
+    });
+
+    if (!pet) {
+      return new NextResponse("Pet not found", { status: 404 });
+    }
+
+    const petUpdated = await prisma.animal.update({
+      data: { bathsCycleDays },
+      where: { id: petId },
+    });
+
+    return NextResponse.json(petUpdated, { status: 200 });
+  } catch (error) {
+    console.error("Failed to fetch pets:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}

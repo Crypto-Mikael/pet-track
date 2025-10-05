@@ -49,7 +49,7 @@ export default function Home() {
           <div className="relative flex flex-col justify-center hover:border-border/60 border-border border-l-2 p-4 w-full">
             <h2 className="text-3xl text-card-foreground font-semibold text-center">10</h2>
             <h1 className="text-2xl text-card-foreground font-semibold text-center">Banhos</h1>
-            <small className="absolute text-xs left-38 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
+            <small className="absolute text-xs right-2 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
           </div>
         </a>
         <a href="/food" className="border-border flex bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
@@ -60,7 +60,7 @@ export default function Home() {
           <div className="relative flex flex-col justify-center hover:border-border/60 border-border border-l-2 p-4 w-full">
             <h1 className="text-3xl text-card-foreground font-semibold text-center">1,200 </h1>
             <p className="text-2xl text-center font-semibold text-card-foreground">kcal</p>
-            <small className="absolute text-xs left-38 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
+            <small className="absolute text-xs right-2 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
           </div>
         </a>
         <a href="/vacine" className="border-border flex bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
@@ -71,7 +71,7 @@ export default function Home() {
           <div className="relative flex flex-col justify-center hover:border-border/60 border-border border-l-2 p-4 w-full">
             <h1 className="text-3xl text-card-foreground font-semibold text-center">3/3</h1>
             <p className="text-2xl text-center font-semibold text-card-foreground">em dia</p>
-            <small className="absolute text-xs left-38 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
+            <small className="absolute text-xs right-2 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
           </div>
         </a>
       </section>
