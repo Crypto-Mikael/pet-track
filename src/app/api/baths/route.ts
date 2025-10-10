@@ -38,3 +38,16 @@ export async function POST(request: NextRequest) {
     return new NextResponse("Failed to create bath", { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const bathId = Number(searchParams.get("id"));
+  if (!bathId) {
+    return new NextResponse("Bad Request: Missing bathId", { status: 400 });
+  }
+
+  const baths = await prisma.bath.delete({
+    where: { id: bathId },
+  });
+  return NextResponse.json(baths, { status: 200 });
+}

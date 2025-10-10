@@ -49,7 +49,7 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                 <SliderPrimitive.Root
                     ref={ref}
                     className={cn(
-                        "relative flex w-full touch-none select-none items-center",
+                        "relative flex w-full touch-none select-none items-center cursor-pointer",
                         className
                     )}
                     onValueChange={(val) => {
@@ -61,12 +61,12 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                 >
 
                     <SliderPrimitive.Track
-                        className="relative h-1 w-full grow overflow-hidden rounded-full bg-primary/20">
-                        <SliderPrimitive.Range className="absolute h-full bg-primary"/>
+                        className="relative h-1 w-full grow overflow-hidden rounded-full bg-primary/20 cursor-pointer">
+                        <SliderPrimitive.Range className="absolute h-full bg-primary cursor-pointer"/>
                     </SliderPrimitive.Track>
 
                     {hasMarks &&
-                        <div className="absolute inset-0 flex grow w-full items-center justify-between px-[7px]">
+                        <div className="absolute inset-0 flex grow w-full items-center justify-between px-[7px] cursor-pointer">
                             {Array.from({length: space + 1}).map((_, index) => (
                                 <div className="w-1 h-2 rounded-full bg-primary" key={index}></div>
                             ))}

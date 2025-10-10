@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { differenceInDays, format, intlFormat } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, CalendarIcon, Plus, ShowerHead } from "lucide-react";
+import { ArrowLeft, CalendarIcon, Plus, ShowerHead, Trash } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -36,10 +36,7 @@ export default function Page() {
     });
   const [bathWeeks, setBathWeeks] = useState([1]);
 
-  const [bathPercent, setBathPercent] = useState({
-    initialValue: 40,
-    value: 0,
-  });
+  const [bathPercent, setBathPercent] = useState<null | { initialValue: number, value: number }>(null);
 
   const [baths, setBaths] = useState<Bath[] | null>(null);
   const [daysWithoutBath, setDaysWithoutBath] = useState<number | null>(null);
@@ -72,7 +69,7 @@ export default function Page() {
         if (baths && baths.length > 0) {
           const daysWithoutBath = differenceInDays(new Date(), baths[baths.length - 1].date)
           setDaysWithoutBath(daysWithoutBath)
-          setBathPercent({initialValue: calcCleanPercent(daysWithoutBath, animal.bathsCycleDays), value: 0 })
+          setBathPercent({initialValue: calcCleanPercent(daysWithoutBath, animal.bathsCycleDays), value: 0})
         } else {
           setDaysWithoutBath(0)
         }
@@ -108,10 +105,26 @@ export default function Page() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
     });
+    location.reload()
+  }
+
+  const removeBath = async (bathId: number) => {
+    try {
+      await fetch(`/api/baths?id=${bathId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      })
+      if (baths) {
+        setBaths(baths.filter(v => v.id !== bathId))
+      }
+    } catch {
+      window.alert('ERRO AO DELETAR')
+    }
+   
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col">
       <header className="text-3xl relative text-foreground text-center border-b-2 border-border py-2 flex-shrink-0">
         <Button
           className="absolute left-2"
@@ -130,16 +143,13 @@ export default function Page() {
           <div className="flex flex-col gap-4">
             <CircularProgress
               textValue="Banho"
-              value={
-                bathPercent.initialValue > bathPercent.value
-                  ? bathPercent.initialValue
-                  : bathPercent.value
-              }
+              value={bathPercent ? (bathPercent.value > bathPercent.initialValue) ? bathPercent?.value : bathPercent?.initialValue : null}
               icon={ShowerHead}
             />
+            
             <HoldToConfirmButton
-              onProgressChange={(b) =>
-                setBathPercent({ initialValue: bathPercent.initialValue, value: b })
+              onProgressChange={(value) =>
+                setBathPercent({ initialValue:  bathPercent?.initialValue ?? 0, value})
               }
               onHoldFinished={() => onSubmit({ date: new Date() })}
             />
@@ -153,12 +163,12 @@ export default function Page() {
             max={12}
             step={1}
             min={1}
-            labelFor="Quanto tempo sem banho"
+            labelFor="Tempo sem banho"
             value={bathWeeks}
-            labelValue={bathWeeks[0]}
+            labelValue={Math.floor(bathWeeks[0])}
             onValueChange={setBathWeeks}
             onValueCommit={onSlideChange}
-            labelTitle="Quanto tempo sem banho"
+            labelTitle="Tempo sem banho"
           />
         </section>
 
@@ -172,12 +182,15 @@ export default function Page() {
                 <TableRow>
                   <TableHead className="w-16 text-base text-center font-semibold">#</TableHead>
                   <TableHead className="border-l-2 border-border text-base font-semibold">Data</TableHead>
+                  <TableHead className="border-l-2 border-border text-base font-semibold">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 { baths === null ? <TableRow className="*:border-border">
                   <TableCell><Skeleton className="w-full h-[29px]"></Skeleton></TableCell>
-                  <TableCell className="border-l-2"><Skeleton className="w-full h-[29px]"></Skeleton></TableCell>
+                  <TableCell className="border-l-2 h-[53px]"><Skeleton className="w-full h-[32px]"></Skeleton></TableCell>
+                  <TableCell className="text-foreground w-12 border-l-2 border-border text-base border-b-2">
+                  </TableCell>
                 </TableRow> :  baths?.length === 0 ? (
                 <TableRow className="*:border-border">
                   <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
@@ -190,12 +203,19 @@ export default function Page() {
                     <TableCell className="text-base text-foreground text-center border-border border-b-2">
                       {index + 1}
                     </TableCell>
-                    <TableCell className="text-foreground border-l-2 border-border text-base border-b-2">
+                    <TableCell className="text-foreground border-l-2 border-border text-base font-semibold border-b-2">
                       {intlFormat(bath.date, {
                         day: '2-digit',
                         month: "2-digit",
                         year: '2-digit',
                       })}
+                    </TableCell>
+                    <TableCell className="text-foregroundw-12 w-16 border-l-2 border-border text-base border-b-2">
+                      <div className="flex justify-center">
+                        <Button onClick={() => removeBath(bath.id)} className="self-center" variant="destructive">
+                          <Trash />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -206,7 +226,7 @@ export default function Page() {
                   <TableCell className="text-base text-foreground text-center font-semibold">
                     {baths === null ? <Skeleton className="w-full h-[29px]"></Skeleton> : baths.length}
                   </TableCell>
-                  <TableCell className="border-l-2 border-border text-foreground text-base font-medium"> 
+                  <TableCell className="border-l-2 border-border text-foreground text-base font-semibold"> 
                     {
                       baths === null || daysWithoutBath === null ? (
                         <Skeleton className="w-full h-[29px]"></Skeleton>
@@ -216,6 +236,9 @@ export default function Page() {
                         `${daysWithoutBath} dias desde o último banho`
                       )
                     }
+                  </TableCell>
+                  <TableCell className="border-l-2 border-border text-foreground text-base font-medium">
+
                   </TableCell>
                 </TableRow>
               </TableFooter>

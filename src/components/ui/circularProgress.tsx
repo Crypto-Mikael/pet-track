@@ -1,23 +1,24 @@
 import * as React from "react"
-import { Check, Circle } from "lucide-react"
+import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "./skeleton"
 
 interface CircularProgressProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: number
+  value: number | null
   icon?: React.ElementType
   size?: number
   textValue?: string
 }
 
 export function CircularProgress({
-  value = 0,
+  value,
   icon: Icon = Check,
   size = 80,
   className,
   textValue,
   ...props
 }: CircularProgressProps) {
-  const safeValue = Math.max(0, Math.min(100, value))
+  const safeValue = Math.max(0, Math.min(100, value ?? 0))
   
   const stroke = 8
   const radius = (size - stroke) / 2
@@ -42,58 +43,62 @@ export function CircularProgress({
     : "text-destructive"
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2">
-      <div
-        className={cn("relative flex items-center justify-center", className)}
-        style={{ width: size, height: size }}
-        {...props}
-      >
-        <svg width={size} height={size}>
-          {/* Trilha de fundo */}
-          <circle
-            className="text-gray-300"
-            stroke="currentColor"
-            fill="transparent"
-            strokeWidth={stroke}
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
-            strokeLinecap="round"
-            strokeDasharray={`${arcLength} ${circumference}`}
-            strokeDashoffset={0}
-            style={{ 
-              transform: "rotate(120deg)",
-              transformOrigin: "50% 50%",
-            }}
-          />
-          
-          {/* Círculo de progresso */}
-          <circle
-            className={colorClass}
-            stroke="currentColor"
-            fill="transparent"
-            strokeWidth={stroke}
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
-            strokeLinecap="round"
-            strokeDasharray={`${arcLength} ${circumference}`}
-            strokeDashoffset={offset}
-            style={{ 
-              transform: "rotate(120deg)",
-              transformOrigin: "50% 50%",
-              transition: "stroke-dashoffset ease-out",
-            }}
-          />
-        </svg>
+    <>
+      <div className="flex flex-col items-center justify-center gap-2">
+      { value ? <div
+          className={cn("relative flex items-center justify-center", className)}
+          style={{ width: size, height: size }}
+          {...props}
+        >
+          <svg width={size} height={size}>
+            {/* Trilha de fundo */}
+            <circle
+              className="text-gray-300"
+              stroke="currentColor"
+              fill="transparent"
+              strokeWidth={stroke}
+              r={radius}
+              cx={size / 2}
+              cy={size / 2}
+              strokeLinecap="round"
+              strokeDasharray={`${arcLength} ${circumference}`}
+              strokeDashoffset={0}
+              style={{ 
+                transform: "rotate(120deg)",
+                transformOrigin: "50% 50%",
+              }}
+            />
+            
+            {/* Círculo de progresso */}
+            <circle
+              className={colorClass}
+              stroke="currentColor"
+              fill="transparent"
+              strokeWidth={stroke}
+              r={radius}
+              cx={size / 2}
+              cy={size / 2}
+              strokeLinecap="round"
+              strokeDasharray={`${arcLength} ${circumference}`}
+              strokeDashoffset={offset}
+              style={{ 
+                transform: "rotate(120deg)",
+                transformOrigin: "50% 50%",
+                transition: "stroke-dashoffset ease-out",
+              }}
+            />
+          </svg>
 
-        <div className="absolute flex items-center justify-center">
-          <Icon className={cn("w-12 h-12", colorClass)} />
-        </div>
+          <div className="absolute flex items-center justify-center">
+            <Icon className={cn("w-12 h-12", colorClass)} />
+          </div>
+        </div> : <Skeleton className="size-20 rounded-full" />}
+        
+        
+        {value ? <p className="text-gray-900 text-center text-3xl font-bold">{safeValue}%</p> : <Skeleton className="w-20 h-9" /> }
+        {value && textValue ? <p className="text-gray-900 text-center text-xl font-semibold">{textValue}</p> : <Skeleton className="w-16 h-7" /> }
       </div>
       
-      <p className="text-gray-900 text-3xl font-bold">{safeValue}%</p>
-      {textValue && <p className="text-gray-900 text-xl font-semibold">{textValue}</p>}
-    </div>
+    </>
   )
 }

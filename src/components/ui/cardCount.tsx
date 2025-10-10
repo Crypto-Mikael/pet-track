@@ -2,7 +2,7 @@ import { Animal } from "@/app/generated/prisma";
 
 import Image from "next/image";
 
-import { Cookie, Mars, ShowerHead, Syringe, Venus } from "lucide-react";
+import { ShowerHead, Syringe } from "lucide-react";
 type CardCountProps = {
   animal: Animal;
 };
@@ -49,8 +49,10 @@ export default function CardCount({ animal }: CardCountProps) {
 </div>
           <div className="flex flex-col h-full gap-16 items-center pt-8">
             <div className="flex gap-8">
-              <CircularProgress textValue="Banho" value={30} icon={ShowerHead} />
-              <CircularProgress textValue="Comida" value={60} icon={Cookie} />
+              <a href={`/bath/${animal?.id}`}>
+                <CircularProgress textValue="Banho" value={30} icon={ShowerHead} />
+              </a>
+              {/* <CircularProgress textValue="Comida" value={60} icon={Cookie} /> */}
               <CircularProgress textValue="Vacina" value={100} icon={Syringe} />
             </div>  
           </div>
