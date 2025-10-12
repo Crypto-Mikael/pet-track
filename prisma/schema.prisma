@@ -60,12 +60,14 @@ model Animal {
 }
 
 model Vaccination {
-  id           Int      @id @default(autoincrement())
-  pet_id       Int
-  vaccine_name String
-  animal       Animal   @relation(fields: [pet_id], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime
+  id              Int      @id @default(autoincrement())
+  petId           Int
+  vaccineName     String
+  expirationDate  DateTime
+  applicationDate DateTime
+  animal          Animal   @relation(fields: [petId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
 
   @@map(name: "vaccinations")
 }

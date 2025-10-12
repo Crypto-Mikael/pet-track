@@ -1,100 +1,96 @@
 'use client'
 import React, { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as Dialog from "@radix-ui/react-dialog";
-import { format, parseISO, differenceInDays, isBefore } from "date-fns";
+import { format, differenceInDays, isBefore } from "date-fns";
 import { Plus, Trash2, Syringe, Calendar as CalIcon, AlertTriangle, ArrowLeft } from "lucide-react";
 import clsx from "clsx";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton"; // <--- seu componente Skeleton
+import { useParams, useRouter } from "next/navigation";
+import { DatePickerField } from "@/components/ui/datePickerField";
+import { Vaccination } from "@/app/generated/prisma";
 
-type Vacina = {
-  id: string;
-  nome: string;
-  aplicada: string; // ISO date
-  validade: string; // ISO date
-};
-
-function daysUntil(dateISO: string) {
-  const d = parseISO(dateISO);
-  return differenceInDays(d, new Date());
-}
-
-function statusOf(v: Vacina) {
-  const dias = daysUntil(v.validade);
-  if (isBefore(parseISO(v.validade), new Date())) return "expired";
+function statusOf(v: Vaccination) {
+  const dias = differenceInDays(v.expirationDate, new Date());
+  if (isBefore(v.expirationDate, new Date())) return "expired";
   if (dias <= 30) return "soon";
   return "ok";
 }
 
-function colorOf(status: string) {
-  switch (status) {
-    case "ok":
-      return {
-        ring: "ring-emerald-200",
-        bg: "bg-emerald-50",
-        border: "border-emerald-300",
-        text: "text-emerald-800",
-      };
-    case "soon":
-      return {
-        ring: "ring-amber-200",
-        bg: "bg-amber-50",
-        border: "border-amber-300",
-        text: "text-amber-800",
-      };
-    case "expired":
-      return {
-        ring: "ring-rose-200",
-        bg: "bg-rose-50",
-        border: "border-rose-300",
-        text: "text-rose-800",
-      };
-    default:
-      return {
-        ring: "",
-        bg: "bg-white",
-        border: "border-gray-200",
-        text: "text-black",
-      };
-  }
-}
-
 export default function VacinasPage() {
+  const params = useParams<{ petId: string }>();
   const router = useRouter();
-  const [vacinas, setVacinas] = useState<Vacina[]>([]);
+  const [vacinas, setVacinas] = useState<Vaccination[] | null>(null); // null indica loading
   const [open, setOpen] = useState(false);
-  const { register, handleSubmit, control, reset } = useForm<Partial<Vacina>>();
+  const [renewModal, setRenewModal] = useState<Vaccination | null>(null);
+  const { register, handleSubmit, control, reset } = useForm<Partial<Vaccination>>();
+
+  const fetchVaccines = async (petId: string) => {
+    const fetchData = await fetch(`/api/vaccines?petId=${petId}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    return await fetchData.json() as Vaccination[];
+  }
 
   useEffect(() => {
-    const exemplo: Vacina[] = [
-      { id: cryptoId(), nome: "Teste", aplicada: new Date().toISOString(), validade: new Date(Date.now() + 120 * 24 * 3600 * 1000).toISOString() },
-      { id: cryptoId(), nome: "Teste", aplicada: new Date().toISOString(), validade: new Date(Date.now() + 22 * 24 * 3600 * 1000).toISOString() },
-      { id: cryptoId(), nome: "Teste", aplicada: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(), validade: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
-    ];
-    setVacinas(exemplo);
-  }, []);
+    async function getData() {
+      setVacinas(null); // começa o loading
+      const vaccines = await fetchVaccines(params.petId);
+      setVacinas(vaccines);
+    }
+    getData();
+  }, [params.petId]);
 
-  function cryptoId() {
-    return Math.random().toString(36).slice(2, 9);
+  const onSubmit = async (data: Partial<Vaccination>) => {
+    try {
+      const response = await fetch("/api/vaccines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, petId: Number(params.petId) }),
+      });
+      const vaccine = await response.json() as Vaccination;
+      setVacinas((s) => s ? [vaccine, ...s] : [vaccine]);
+      reset();
+      setOpen(false);
+    } catch (err) {
+      console.error("Erro ao criar a vacina:", err);
+    }
   }
 
-  function onSubmit(data: Partial<Vacina>) {
-    if (!data.nome || !data.aplicada || !data.validade) return;
-    const novo: Vacina = { id: cryptoId(), nome: data.nome, aplicada: data.aplicada, validade: data.validade } as Vacina;
-    setVacinas((s) => [novo, ...s]);
-    reset();
-    setOpen(false);
+  const onRenew = async (data: Partial<Vaccination>) => {
+    if (!renewModal) return;
+    try {
+      const response = await fetch(`/api/vaccines?id=${renewModal.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const updated = await response.json() as Vaccination;
+      setVacinas((s) => s ? s.map(v => v.id === updated.id ? updated : v) : [updated]);
+      reset();
+      setRenewModal(null);
+    } catch (err) {
+      console.error("Erro ao renovar a vacina:", err);
+    }
   }
 
-  function remove(id: string) {
-    setVacinas((s) => s.filter((v) => v.id !== id));
+  async function remove(id: string) {
+    try {
+      await fetch(`/api/vaccines?id=${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      setVacinas((s) => s ? s.filter((v) => v.id !== Number(id)) : []);
+    } catch (err) {
+      console.error("Erro ao deletar a vacina:", err);
+    }
   }
 
   return (
-    <div className="flex flex-col">
-      <header className="text-3xl relative text-foreground text-center border-b-2 border-border py-2 flex-shrink-0">
+    <>
+      <header className="px-4 sticky top-0 py-2 flex w-full justify-center items-center bg-background/30 backdrop-blur-xs text-center">
         <Button
           className="absolute left-2"
           variant="ghost"
@@ -103,109 +99,121 @@ export default function VacinasPage() {
         >
           <ArrowLeft />
         </Button>
-        Banhos
+        <h1 className="text-3xl justify-center">Vacinas</h1>
       </header>
-      <div className="flex justify-center mb-6">
-        <Dialog.Root open={open} onOpenChange={setOpen}>
-          <Dialog.Trigger asChild>
-            <Button className="w-full h-12 capitalize font-bold text-base"> <Plus /> Adicionar Nova Vacina</Button>
-          </Dialog.Trigger>
 
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-            <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 w-[520px] shadow-lg">
-              <Dialog.Title className="text-xl font-bold mb-3">Adicionar Vacina</Dialog.Title>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <section className="flex flex-col gap-4 p-4 h-[80dvh] overflow-y-auto">
+        {vacinas === null ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-lg p-6 shadow-sm flex flex-col h-94 bg-card justify-between items-start gap-4 animate-pulse">
+              <div className="flex flex-col w-full">
+                <Skeleton className="h-12 w-26 mb-3" />
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-6 w-46 my-1" />
+              </div>
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ))
+        ) : (
+          vacinas.map((v) => {
+            const st = statusOf(v);
+            return (
+              <article key={v.id} className={clsx("rounded-lg p-6 shadow-sm flex flex-col bg-card justify-between items-start gap-4")}>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Nome</label>
-                  <input {...register("nome")} className="w-full border rounded px-3 py-2" placeholder="Nome da vacina" />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Data de Aplicação</label>
-                    <Controller
-                      control={control}
-                      name="aplicada"
-                      defaultValue={new Date().toISOString()}
-                      render={({ field: { value, onChange } }) => (
-                        <div>
-                          <Calendar
-                            mode="single"
-                            selected={value ? parseISO(value) : undefined}
-                            onSelect={(d) => d && onChange(d.toISOString())}
-                          />
-                        </div>
-                      )}
-                    />
+                  <div className="flex items-center gap-3">
+                    <div className={clsx("p-2 rounded-full border-2 text-card-foreground")}>
+                      <Syringe />
+                    </div>
+                    <h3 className="text-lg font-bold text-card-foreground">{v.vaccineName}</h3>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Validade</label>
-                    <Controller
-                      control={control}
-                      name="validade"
-                      defaultValue={new Date().toISOString()}
-                      render={({ field: { value, onChange } }) => (
-                        <div>
-                          <Calendar
-                            mode="single"
-                            selected={value ? parseISO(value) : undefined}
-                            onSelect={(d) => d && onChange(d.toISOString())}
-                          />
-                        </div>
-                      )}
-                    />
-                  </div>
+                  <ul className="mt-4 space-y-2">
+                    <li className="flex items-center gap-2 text-foreground"><CalIcon size={16} /> Aplicação: <strong className="ml-2">{format(v.applicationDate, "dd/MM/yyyy")}</strong></li>
+                    <li className="flex items-center gap-2 text-foreground"><CalIcon size={16} /> Validade: <strong className={clsx(st === "expired" ? "text-destructive" : st === "soon" ? "text-amber-400" : "text-primary", "ml-2")}>{format(v.expirationDate, "dd/MM/yyyy")}</strong></li>
+                    {st === "soon" && (
+                      <li className="flex items-center gap-2 mt-2 text-amber-400"><AlertTriangle size={16} className="text-amber-400" /> Vence em breve</li>
+                    )}
+                    {st === "expired" && (
+                      <li className="flex items-center gap-2 mt-2 text-destructive"><AlertTriangle size={16} className="text-destructive" /> Vacina vencida</li>
+                    )}
+                  </ul>
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Dialog.Close asChild>
-                    <button type="button" className="px-4 py-2 rounded border">Cancelar</button>
-                  </Dialog.Close>
-                  <button type="submit" className="px-4 py-2 rounded bg-slate-900 text-white">Salvar</button>
-                </div>
-              </form>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-      </div>
+                <Button
+                  variant="secondary"
+                  className="w-full p-2 rounded"
+                  onClick={() => {
+                    setRenewModal(v);
+                    reset({
+                      applicationDate: v.applicationDate,
+                      expirationDate: v.expirationDate
+                    });
+                  }}
+                >
+                  RENOVAR
+                </Button>
 
-      <section className="space-y-6">
-        {vacinas.map((v) => {
-          const st = statusOf(v);
-          const col = colorOf(st);
-          return (
-            <article key={v.id} className={clsx("rounded-lg border p-6 shadow-sm flex justify-between items-start gap-4", col.border, col.bg)}>
-              <div>
-                <div className="flex items-center gap-3">
-                  <div className={clsx("p-2 rounded-full border", col.ring)}>
-                    <Syringe className={clsx(col.text)} />
-                  </div>
-                  <h3 className="text-lg font-bold">{v.nome}</h3>
-                </div>
-
-                <ul className="mt-4 space-y-2 text-slate-700">
-                  <li className="flex items-center gap-2"><CalIcon size={16} /> Aplicação: <strong className="ml-2">{format(parseISO(v.aplicada), "dd/MM/yyyy")}</strong></li>
-                  <li className="flex items-center gap-2"><CalIcon size={16} /> Validade: <strong className={clsx(st === "expired" ? "text-rose-600" : st === "soon" ? "text-amber-600" : "text-emerald-800", "ml-2")}>{format(parseISO(v.validade), "dd/MM/yyyy")}</strong></li>
-                  {st === "soon" && (
-                    <li className="flex items-center gap-2 text-amber-700 mt-2"><AlertTriangle size={16} /> Vence em breve</li>
-                  )}
-                  {st === "expired" && (
-                    <li className="flex items-center gap-2 text-rose-700 mt-2"><AlertTriangle size={16} /> Vacina vencida</li>
-                  )}
-                </ul>
-              </div>
-
-              <div className="text-slate-400">
-                <button onClick={() => remove(v.id)} className="p-2 rounded hover:bg-slate-100">
-                  <Trash2 />
-                </button>
-              </div>
-            </article>
-          );
-        })}
+                <Button variant="destructive" onClick={() => remove(v.id.toString())} className="w-full p-2 rounded">
+                  <Trash2 className="size-6" />
+                </Button>
+              </article>
+            )
+          })
+        )}
       </section>
-    </div>
+
+      {/* Modal de criar */}
+      <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg p-4 w-96 shadow-lg">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm mb-1 font-semibold">Nome da Vacina</label>
+                <input {...register("vaccineName")} className="w-full border rounded p-2" placeholder="Nome da vacina" />
+              </div>
+              <div className="flex flex-col items-center gap-4 w-full ">
+                <DatePickerField control={control} name="applicationDate" label="Data de Aplicação" />
+                <DatePickerField control={control} name="expirationDate" label="Data de Validade" />
+              </div>
+              <div className="flex flex-col justify-end gap-2">
+                <Dialog.Close asChild>
+                  <Button variant="outline" type="button" className="px-4 py-2 rounded border">Cancelar</Button>
+                </Dialog.Close>
+                <Button type="submit" className="px-4 py-2 rounded">Salvar</Button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Modal de renovar */}
+      <Dialog.Root open={!!renewModal} onOpenChange={(open) => !open && setRenewModal(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg p-4 w-96 shadow-lg">
+            <form onSubmit={handleSubmit(onRenew)} className="flex flex-col gap-4">
+              <div className="flex flex-col items-center gap-4 w-full ">
+                <DatePickerField control={control} name="applicationDate" label="Nova Data de Aplicação" />
+                <DatePickerField control={control} name="expirationDate" label="Nova Data de Validade" />
+              </div>
+              <div className="flex flex-col justify-end gap-2">
+                <Dialog.Close asChild>
+                  <Button variant="outline" type="button" className="px-4 py-2 rounded border">CANCELAR</Button>
+                </Dialog.Close>
+                <Button type="submit" className="px-4 py-2 rounde">RENOVAR</Button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <div className="px-4 sticky bottom-4 flex w-full justify-between items-center text-center">
+        <Button onClick={() => setOpen(true)} className="w-full h-12 capitalize font-bold text-base">
+          <Plus className="size-6" /> ADICIONAR
+        </Button>
+      </div>
+    </>
   );
 }

@@ -63,7 +63,7 @@ export default function Home() {
             <small className="absolute text-xs right-2 bottom-1 flex items-center gap-1 font-extralight">Ver mais detalhes<ArrowRight className="size-3" /></small>
           </div>
         </a> */}
-        <a href="/vacine" className="border-border flex bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
+        <a href={`vaccine/${animals[tabNumber]?.id.toString()}`} className="border-border flex bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
           <div className="flex flex-col gap-2 relative items-center justify-center px-4">
             <Syringe className="size-12 text-card-foreground rounded-full" />
             <p className="absolute bottom-1 text-xs">14/09/2025</p>
