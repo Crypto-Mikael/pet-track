@@ -6,10 +6,7 @@ type HoldToConfirmButtonProps = {
   onHoldFinished: () => void;
   holdDuration?: number;
   onProgressChange?: (percent: number) => void;
-  initialText?: string;
-  midHoldText?: string;
-  nearCompletionText?: string;
-  completedText?: string;
+  buttonText: string;
   className?: string;
   progressColor?: string; // ex: "bg-primary" ou "linear-gradient(...)"
 };
@@ -18,10 +15,7 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
   onHoldFinished,
   holdDuration = 1500,
   onProgressChange,
-  initialText = "Dar banho",
-  midHoldText = "Dando banho...",
-  nearCompletionText = "Secando...",
-  completedText = "Banho Concluído!",
+  buttonText = "Dar banho",
   className,
   progressColor = "bg-primary",
 }) => {
@@ -91,7 +85,7 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
       onTouchCancel={cancelHold}
       onMouseUp={cancelHold}
       onMouseLeave={cancelHold}
-      className={cn("relative font-bold h-9 overflow-hidden w-auto px-4", className)}
+      className={cn("relative  h-12 overflow-hidden w-auto px-4", className)}
       variant="outline"
       disabled={completed}
     >
@@ -104,11 +98,8 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
         }}
         aria-hidden
       />
-      <span className="relative z-10 whitespace-nowrap">
-        {progress === 0 && !completed && initialText}
-        {progress > 0 && progress < 60 && !completed && midHoldText}
-        {progress >= 60 && progress < 100 && !completed && nearCompletionText}
-        {completed && completedText}
+      <span className="relative font-bold text-base z-10 whitespace-nowrap">
+        {buttonText}
       </span>
     </Button>
   );

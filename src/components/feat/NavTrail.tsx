@@ -12,10 +12,10 @@ const navItems = [
   // { href: '/news', icon: Bell },
 ];
 
-export default function NavTrail({ className }: { className?: string }) {
+export default function NavTrail() {
   const pathName = usePathname();
     return <>
-    <nav className={`flex flex-col items-center gap-4 relative flex-1 max-sm:hidden max-w-24 h-dvh bg-background/90 border-border border-r-2 z-50 ${className}`}>
+    <nav className={`flex flex-col items-center gap-4 sticky top-0 max-sm:hidden flex-1 max-w-24 h-dvh bg-background/90 border-border border-r-2 z-50`}>
       <div className='flex flex-col justify-center size-14 bg-accent items-center rounded-2xl mt-4 mb-4'>
         <Dog className="scale-150 text-accent-foreground" />
       </div>

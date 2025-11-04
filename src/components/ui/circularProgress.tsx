@@ -42,6 +42,16 @@ export function CircularProgress({
     ? "text-yellow-500" 
     : "text-destructive"
 
+  if (!value) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2">
+        <Skeleton className="size-20 rounded-full" />
+        <Skeleton className="w-15 h-9 rounded-full" />
+        <Skeleton className="w-18 h-7 rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-col items-center justify-center gap-2">
@@ -53,7 +63,7 @@ export function CircularProgress({
           <svg width={size} height={size}>
             {/* Trilha de fundo */}
             <circle
-              className="text-gray-300"
+              className="text-foreground/10"
               stroke="currentColor"
               fill="transparent"
               strokeWidth={stroke}
@@ -95,8 +105,8 @@ export function CircularProgress({
         </div> : <Skeleton className="size-20 rounded-full" />}
         
         
-        {value ? <p className="text-gray-900 text-center text-3xl font-bold">{safeValue}%</p> : <Skeleton className="w-20 h-9" /> }
-        {value && textValue ? <p className="text-gray-900 text-center text-xl font-semibold">{textValue}</p> : <Skeleton className="w-16 h-7" /> }
+        {value ? <p className="text-foreground text-center text-3xl font-bold">{safeValue}%</p> : <Skeleton className="w-20 h-9" /> }
+        {value && textValue ? <p className="text-foreground text-center text-xl font-semibold">{textValue}</p> : <Skeleton className="w-16 h-7" /> }
       </div>
       
     </>

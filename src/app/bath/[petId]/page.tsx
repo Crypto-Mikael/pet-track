@@ -148,6 +148,7 @@ export default function Page() {
             />
             
             <HoldToConfirmButton
+              buttonText="DAR BANHO"
               onProgressChange={(value) =>
                 setBathPercent({ initialValue:  bathPercent?.initialValue ?? 0, value})
               }
