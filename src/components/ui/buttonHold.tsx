@@ -98,7 +98,7 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
         }}
         aria-hidden
       />
-      <span className="relative font-bold text-base z-10 whitespace-nowrap">
+      <span className="relative font-bold text-base z-10 whitespace-nowrap select-none">
         {buttonText}
       </span>
     </Button>

@@ -1,135 +1,184 @@
 "use client";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useForm, FieldValues } from "react-hook-form";
+import { differenceInDays, intlFormat } from "date-fns";
+import {
+  ArrowLeft,
+  Plus,
+  ShowerHead,
+  Trash,
+} from "lucide-react";
 import { Animal, Bath } from "@/app/generated/prisma";
 import { Button } from "@/components/ui/button";
 import HoldToConfirmButton from "@/components/ui/buttonHold";
-import { Calendar } from "@/components/ui/calendar";
 import { CircularProgress } from "@/components/ui/circularProgress";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { DatePickerField } from "@/components/ui/datePickerField";
 import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { differenceInDays, format, intlFormat } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { ArrowLeft, CalendarIcon, Plus, ShowerHead, Trash } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
 
 export default function Page() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
-  const {
-      control,
-      handleSubmit,
-    } = useForm({
-      defaultValues: {
-        date: new Date(),
-      },
-    });
-  const [bathWeeks, setBathWeeks] = useState([1]);
 
-  const [bathPercent, setBathPercent] = useState<null | { initialValue: number, value: number }>(null);
+  const { control, handleSubmit } = useForm<FieldValues>({
+    defaultValues: { date: new Date().toISOString() },
+  });
 
+  const [bathWeeks, setBathWeeks] = useState<number[]>([1]);
+  const [bathPercent, setBathPercent] = useState<{ initialValue: number; value: number } | null>(null);
   const [baths, setBaths] = useState<Bath[] | null>(null);
   const [daysWithoutBath, setDaysWithoutBath] = useState<number | null>(null);
 
-  const calcCleanPercent = (daysWithoutBath: number, cycleDays: number) => {
-    const percent = Math.max(0, 100 - (daysWithoutBath / cycleDays) * 100)
-    return Math.round(percent)
-  }
-  
-  const fetchBaths = async (petId: number) => {
-    const bathsResponse = await fetch(`/api/baths?id=${petId}`);
-    const bathsData = await bathsResponse.json() as Bath[];
-    return bathsData;
-  }
+  // --- Fetchers ---
+  const fetchBaths = async (petId: number): Promise<Bath[]> => {
+    const res = await fetch(`/api/baths?id=${petId}`);
+    if (!res.ok) throw new Error("Erro ao buscar banhos");
+    return res.json();
+  };
 
-  const fetchAnimal = async (petId: number) => {
-    const animalResponse = await fetch(`/api/pets?id=${petId}`);
-    const animalData = await animalResponse.json() as Animal;
-    return animalData;
-  }
+  const fetchAnimal = async (petId: number): Promise<Animal> => {
+    const res = await fetch(`/api/pets?id=${petId}`);
+    if (!res.ok) throw new Error("Erro ao buscar animal");
+    return res.json();
+  };
 
+  // --- Effects ---
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const baths = await fetchBaths(Number(params.petId));
-        setBaths(baths);
-        const animal = await fetchAnimal(Number(params.petId));
-        setBathWeeks([animal.bathsCycleDays / 7])
-
-        if (baths && baths.length > 0) {
-          const daysWithoutBath = differenceInDays(new Date(), baths[baths.length - 1].date)
-          setDaysWithoutBath(daysWithoutBath)
-          setBathPercent({initialValue: calcCleanPercent(daysWithoutBath, animal.bathsCycleDays), value: 0})
-        } else {
-          setDaysWithoutBath(0)
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-      }
-    }
-    fetchData();
-  }, [params.petId, daysWithoutBath]);
-
-  const onSubmit = async ({ date }: { date: Date }) => {
+    const loadData = async () => {
     try {
-      const bathCreateResponse = await fetch("/api/baths", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, petId: Number(params.petId) }),
-      });
-      const bathCreateData = await bathCreateResponse.json() as Bath;
-
-      if (!bathCreateResponse.ok) {
-        throw new Error("Falha ao criar o banho.");
-      }
-      if (baths) {
-        setBaths([...baths, bathCreateData]);
-      }
-    } catch (error) {
-      console.error("Erro ao criar o pet:", error);
+      const [bathsData, animalData] = await Promise.all([
+        fetchBaths(Number(params.petId)),
+        fetchAnimal(Number(params.petId)),
+      ]);
+      setBaths(bathsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setBathWeeks([animalData.bathsCycleDays / 7]);
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
     }
   };
 
-  const onSlideChange = async () => {
+  loadData();
+  }, [params.petId]);
+
+  useEffect(() => {
+    if (!baths || baths.length === 0) {
+      setDaysWithoutBath(0);
+      setBathPercent({ initialValue: 100, value: 0 });
+      return;
+    }
+
+    // Último banho registrado
+    const lastBath = baths[baths.length - 1];
+    const lastBathDate = new Date(lastBath.date);
+
+    const days = differenceInDays(new Date(), lastBathDate);
+    setDaysWithoutBath(days);
+
+    const cycleDays = (bathWeeks[0] ?? 1) * 7;
+    const percent = Math.round(Math.max(0, 100 - (days / cycleDays) * 100));
+
+    setBathPercent({ initialValue: percent, value: 0 });
+  }, [baths, bathWeeks]);
+
+  // --- Actions ---
+  const onSubmit = async (data: FieldValues) => {
+    try {
+      const res = await fetch("/api/baths", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: data.date, petId: Number(params.petId) }),
+      });
+
+      if (!res.ok) throw new Error("Falha ao criar banho");
+
+      const newBath = (await res.json()) as Bath;
+      setBaths((prev) => (prev ? [...prev, newBath] : [newBath]));
+    } catch (err) {
+      console.error("Erro ao criar banho:", err);
+    }
+  };
+
+  const onCycleChange = async () => {
     await fetch(`/api/pets?id=${params.petId}&bathsCycleDays=${bathWeeks[0] * 7}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
     });
-    location.reload()
-  }
+  };
 
   const removeBath = async (bathId: number) => {
     try {
-      await fetch(`/api/baths?id=${bathId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      })
-      if (baths) {
-        setBaths(baths.filter(v => v.id !== bathId))
-      }
+      await fetch(`/api/baths?id=${bathId}`, { method: "DELETE" });
+      setBaths((prev) => prev?.filter((b) => b.id !== bathId) ?? []);
     } catch {
-      window.alert('ERRO AO DELETAR')
+      alert("Erro ao deletar banho");
     }
-   
+  };
+
+  if (!baths) {
+    return (
+      <div className="flex flex-col">
+        <header className="relative py-2 border-b-2 border-border text-center text-3xl text-foreground shrink-0">
+          <Button
+            className="absolute left-2"
+            variant="ghost"
+            onClick={() => router.back()}
+            size="icon"
+          >
+            <ArrowLeft />
+          </Button>
+          Banhos
+        </header>
+        <div className="flex-1 overflow-y-auto">
+          <section className="p-4 bg-muted/30 flex flex-col gap-4">
+            <div className="space-y-4 flex flex-col items-center">
+              <Skeleton className="w-[188px] h-[188px] rounded-full" />
+              <Skeleton className="w-40 h-10 rounded-full" />
+            </div>
+          </section>
+          <section className="p-4 border-t-2 border-border">
+            <h2 className="text-xl font-semibold text-foreground mb-4">Configurações</h2>
+            <Skeleton className="w-full h-10 rounded-md" />
+          </section>
+          <section className="flex flex-col gap-2 p-4 border-t-2 border-border">
+            <h2 className="text-xl font-semibold text-foreground mb-2">Histórico de Banhos</h2>
+            <div className="border-2 border-border rounded-2xl overflow-hidden">
+              <div className="max-h-[200px] overflow-y-auto">
+                <div className="p-4 space-y-2">
+                  <Skeleton className="w-full h-8" />
+                  <Skeleton className="w-full h-8" />
+                </div>
+              </div>
+              <div className="border-t border-border bg-muted/50 p-3 flex items-center justify-between">
+                <div className="font-semibold text-foreground">
+                  <Skeleton className="w-12 h-6" />
+                </div>
+                <div className="text-foreground">
+                  <Skeleton className="w-48 h-6" />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col">
-      <header className="text-3xl relative text-foreground text-center border-b-2 border-border py-2 flex-shrink-0">
+    <>
+      <header className="relative py-2 border-b-2 border-border text-center text-3xl text-foreground shrink-0">
         <Button
           className="absolute left-2"
           variant="ghost"
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           size="icon"
         >
           <ArrowLeft />
@@ -137,160 +186,106 @@ export default function Page() {
         Banhos
       </header>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Seção de Status */}
-        <section className="p-4 bg-muted/30">
-          <div className="flex flex-col gap-4">
-            <CircularProgress
-              textValue="Banho"
-              value={bathPercent ? (bathPercent.value > bathPercent.initialValue) ? bathPercent?.value : bathPercent?.initialValue : null}
-              icon={ShowerHead}
-            />
-            
-            <HoldToConfirmButton
-              buttonText="DAR BANHO"
-              onProgressChange={(value) =>
-                setBathPercent({ initialValue:  bathPercent?.initialValue ?? 0, value})
-              }
-              onHoldFinished={() => onSubmit({ date: new Date() })}
-            />
-          </div>
-        </section>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button className="rounded-full fixed bottom-19 right-3 h-14 w-14 p-0 z-50 shadow-lg">
+            <Plus className="size-6" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="p-6">
+          <DialogHeader>
+            <DialogTitle>Adicionar Manualmente</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
+            <DatePickerField control={control} name="date" label="Data do banho" />
+            <DialogFooter>
+              <Button type="submit" className="w-full h-10 capitalize font-bold text-sm">
+                Adicionar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-        {/* Seção de Configuração */}
-        <section className="p-4 border-t-2 border-border">
-          <h2 className="text-xl text-foreground font-semibold mb-4">Configurações</h2>
-          <SliderTooltip
-            max={12}
-            step={1}
-            min={1}
-            labelFor="Tempo sem banho"
-            value={bathWeeks}
-            labelValue={Math.floor(bathWeeks[0])}
-            onValueChange={setBathWeeks}
-            onValueCommit={onSlideChange}
-            labelTitle="Tempo sem banho"
-          />
-        </section>
-
-        {/* Seção de Registros */}
-        <section className="flex flex-col gap-2 p-4 border-t-2 border-border">
-          <h2 className="text-xl text-foreground font-semibold mb-2">Histórico de Banhos</h2>
-          <div className="border-border border-2 rounded-2xl overflow-hidden">
-            <div className="max-h-[200px] overflow-y-auto">
-              <Table>
-              <TableHeader className="*:border-border bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-16 text-base text-center font-semibold">#</TableHead>
-                  <TableHead className="border-l-2 border-border text-base font-semibold">Data</TableHead>
-                  <TableHead className="border-l-2 border-border text-base font-semibold">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                { baths === null ? <TableRow className="*:border-border">
-                  <TableCell><Skeleton className="w-full h-[29px]"></Skeleton></TableCell>
-                  <TableCell className="border-l-2 h-[53px]"><Skeleton className="w-full h-[32px]"></Skeleton></TableCell>
-                  <TableCell className="text-foreground w-12 border-l-2 border-border text-base border-b-2">
-                  </TableCell>
-                </TableRow> :  baths?.length === 0 ? (
-                <TableRow className="*:border-border">
-                  <TableCell colSpan={2} className="text-center text-muted-foreground py-8">
-                    Nenhum banho registrado ainda
-                  </TableCell>
-                </TableRow>
-              ) : (
-                baths.map((bath, index) => (
-                  <TableRow key={bath.id} className="hover:bg-muted/30">
-                    <TableCell className="text-base text-foreground text-center border-border border-b-2">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell className="text-foreground border-l-2 border-border text-base font-semibold border-b-2">
-                      {intlFormat(bath.date, {
-                        day: '2-digit',
-                        month: "2-digit",
-                        year: '2-digit',
-                      })}
-                    </TableCell>
-                    <TableCell className="text-foregroundw-12 w-16 border-l-2 border-border text-base border-b-2">
-                      <div className="flex justify-center">
-                        <Button onClick={() => removeBath(bath.id)} className="self-center" variant="destructive">
-                          <Trash />
-                        </Button>
+      <section className="p-4 bg-muted/30 flex flex-col gap-4">
+        <CircularProgress
+          textValue="Banho"
+          size={188}
+          value={
+            bathPercent
+              ? Math.max(bathPercent.value, bathPercent.initialValue)
+              : 0
+          }
+          icon={ShowerHead}
+        />
+        <HoldToConfirmButton
+          buttonText="DAR BANHO"
+          onProgressChange={(value) =>
+            setBathPercent((prev) => ({
+              initialValue: prev?.initialValue ?? 0,
+              value,
+            }))
+          }
+          onHoldFinished={() => onSubmit({ date: new Date() })}
+        />
+      </section>
+      <section className="p-4 border-t-2 border-border">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Configurações</h2>
+        <SliderTooltip
+          max={12}
+          step={1}
+          min={1}
+          labelFor="Tempo sem banho"
+          value={bathWeeks}
+          labelValue={Math.floor(bathWeeks[0])}
+          onValueChange={setBathWeeks}
+          onValueCommit={onCycleChange}
+          labelTitle="Tempo sem banho"
+        />
+      </section>
+      <section className="flex flex-col gap-2 p-4 border-t-2 border-border">
+        <h2 className="text-xl font-semibold text-foreground mb-2">Histórico de Banhos</h2>
+        <div className="border-2 border-border rounded-2xl overflow-hidden">
+          <div className="max-h-[200px] overflow-y-auto">
+            {baths.length ? (
+              <div className="flex flex-col divide-y divide-border">
+                {baths.map((bath, index) => (
+                  <div
+                    key={bath.id}
+                    className="flex items-center justify-between p-4 hover:bg-muted/30"
+                  >
+                    <div>
+                      <div className="text-sm text-muted-foreground">#{index + 1}</div>
+                      <div className="text-base font-semibold">
+                        {intlFormat(bath.date, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-              </TableBody>
-              <TableFooter className="border-border bg-muted/50">
-                <TableRow>
-                  <TableCell className="text-base text-foreground text-center font-semibold">
-                    {baths === null ? <Skeleton className="w-full h-[29px]"></Skeleton> : baths.length}
-                  </TableCell>
-                  <TableCell className="border-l-2 border-border text-foreground text-base font-semibold"> 
-                    {
-                      baths === null || daysWithoutBath === null ? (
-                        <Skeleton className="w-full h-[29px]"></Skeleton>
-                      ) : baths.length === 0 ? (
-                        'Nenhum banho registrado'
-                      ) : (
-                        `${daysWithoutBath} dias desde o último banho`
-                      )
-                    }
-                  </TableCell>
-                  <TableCell className="border-l-2 border-border text-foreground text-base font-medium">
-
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
+                    </div>
+                    <Button
+                      onClick={() => removeBath(bath.id)}
+                      variant="destructive"
+                      className="size-10"
+                    >
+                      <Trash />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 text-center text-muted-foreground">Nenhum banho registrado ainda</div>
+            )}
+          </div>
+          <div className="border-t border-border bg-muted/50 p-3 flex items-center justify-between">
+            <div className="font-semibold text-foreground">{baths.length}</div>
+            <div className="text-foreground">
+              {baths.length === 0 ? "Nenhum banho registrado" : `${daysWithoutBath} dias desde o último banho`}
             </div>
           </div>
-        </section>
-
-        {/* Seção de Adicionar Manualmente */}
-        <section className="p-4 border-t-2 border-border bg-muted/30">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            <h2 className="text-xl text-foreground font-semibold">Adicionar Manualmente</h2>
-            <Controller
-              name="date"
-              control={control}
-              render={({ field }) => (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {field.value ? (
-                        format(field.value, "PPP", { locale: ptBR })
-                      ) : (
-                        <span>Selecione uma data</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) =>
-                        date > new Date() || date < new Date("1990-01-01")
-                      }
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-            />
-            <Button type="submit" className="w-full h-12 capitalize font-bold text-base">
-              ADICIONAR
-              <Plus className="size-5 ml-2" />
-            </Button>
-          </form>
-        </section>
-      </div>
-    </div>
+        </div>
+      </section>
+    </>
   );
 }
