@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"; // <--- seu componente Skel
 import { useParams, useRouter } from "next/navigation";
 import { DatePickerField } from "@/components/ui/datePickerField";
 import { Vaccination } from "@/app/generated/prisma";
+import { CircularProgress } from "@/components/ui/circularProgress";
 
 function statusOf(v: Vaccination) {
   const dias = differenceInDays(v.expirationDate, new Date());
@@ -18,10 +19,17 @@ function statusOf(v: Vaccination) {
   return "ok";
 }
 
+function calculateValidVaccinePercentage(vaccines: Vaccination[] | null) {
+  if (!vaccines || vaccines.length === 0) return null;
+  
+  const validVaccines = vaccines.filter(v => !isBefore(v.expirationDate, new Date()));
+  return Math.round((validVaccines.length / vaccines.length) * 100);
+}
+
 export default function VacinasPage() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
-  const [vacinas, setVacinas] = useState<Vaccination[] | null>(null); // null indica loading
+  const [vacinas, setVacinas] = useState<Vaccination[] | null>(null);
   const [open, setOpen] = useState(false);
   const [renewModal, setRenewModal] = useState<Vaccination | null>(null);
   const { register, handleSubmit, control, reset } = useForm<Partial<Vaccination>>();
@@ -90,21 +98,30 @@ export default function VacinasPage() {
 
   return (
     <>
-      <header className="px-4 sticky top-0 py-2 flex w-full justify-center items-center bg-background/30 backdrop-blur-xs text-center">
+      <header className="relative py-2 border-b-2 border-border text-center text-3xl text-foreground shrink-0">
         <Button
           className="absolute left-2"
           variant="ghost"
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           size="icon"
         >
           <ArrowLeft />
         </Button>
-        <h1 className="text-3xl justify-center">Vacinas</h1>
+        Vacinas
       </header>
 
-      <section className="flex flex-col gap-4 p-4 h-[80dvh] overflow-y-auto">
+      <section className="p-4 bg-muted/30 flex flex-col gap-4 border-b-2 border-border">
+        <CircularProgress
+          textValue="Vacina"
+          size={188}
+          value={calculateValidVaccinePercentage(vacinas)}
+          icon={Syringe}
+        />
+      </section>
+
+      <section className="flex flex-col gap-4 p-4 max-h-fit overflow-y-auto">
         {vacinas === null ? (
-          Array.from({ length: 5 }).map((_, i) => (
+          Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-lg p-6 shadow-sm flex flex-col h-94 bg-card justify-between items-start gap-4 animate-pulse">
               <div className="flex flex-col w-full">
                 <Skeleton className="h-12 w-26 mb-3" />
@@ -119,26 +136,24 @@ export default function VacinasPage() {
           vacinas.map((v) => {
             const st = statusOf(v);
             return (
-              <article key={v.id} className={clsx("rounded-lg p-6 shadow-sm flex flex-col bg-card justify-between items-start gap-4")}>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <div className={clsx("p-2 rounded-full border-2 text-card-foreground")}>
-                      <Syringe />
-                    </div>
-                    <h3 className="text-lg font-bold text-card-foreground">{v.vaccineName}</h3>
+              <article key={v.id} className={clsx("border-border border-2 rounded-2xl p-6 flex flex-col bg-card justify-between items-start gap-4")}>
+                <div className="flex items-center gap-3">
+                  <div className={clsx("p-2 rounded-full border-2 text-card-foreground")}>
+                    <Syringe />
                   </div>
-
-                  <ul className="mt-4 space-y-2">
-                    <li className="flex items-center gap-2 text-foreground"><CalIcon size={16} /> Aplicação: <strong className="ml-2">{format(v.applicationDate, "dd/MM/yyyy")}</strong></li>
-                    <li className="flex items-center gap-2 text-foreground"><CalIcon size={16} /> Validade: <strong className={clsx(st === "expired" ? "text-destructive" : st === "soon" ? "text-amber-400" : "text-primary", "ml-2")}>{format(v.expirationDate, "dd/MM/yyyy")}</strong></li>
-                    {st === "soon" && (
-                      <li className="flex items-center gap-2 mt-2 text-amber-400"><AlertTriangle size={16} className="text-amber-400" /> Vence em breve</li>
-                    )}
-                    {st === "expired" && (
-                      <li className="flex items-center gap-2 mt-2 text-destructive"><AlertTriangle size={16} className="text-destructive" /> Vacina vencida</li>
-                    )}
-                  </ul>
+                  <h3 className="text-lg font-bold text-card-foreground">{v.vaccineName}</h3>
                 </div>
+
+                <ul className="mt-4 space-y-2">
+                  <li className="flex items-center gap-2 text-foreground"><CalIcon size={16} /> Aplicação: <strong className="ml-2">{format(v.applicationDate, "dd/MM/yyyy")}</strong></li>
+                  <li className="flex items-center gap-2 text-foreground"><CalIcon size={16} /> Validade: <strong className={clsx(st === "expired" ? "text-destructive" : st === "soon" ? "text-amber-400" : "text-primary", "ml-2")}>{format(v.expirationDate, "dd/MM/yyyy")}</strong></li>
+                  {st === "soon" && (
+                    <li className="flex items-center gap-2 mt-2 text-amber-400"><AlertTriangle size={16} className="text-amber-400" /> Vence em breve</li>
+                  )}
+                  {st === "expired" && (
+                    <li className="flex items-center gap-2 mt-2 text-destructive"><AlertTriangle size={16} className="text-destructive" /> Vacina vencida</li>
+                  )}
+                </ul>
 
                 <Button
                   variant="secondary"
@@ -163,7 +178,10 @@ export default function VacinasPage() {
         )}
       </section>
 
-      {/* Modal de criar */}
+      <Button onClick={() => setOpen(true)} className="rounded-full fixed bottom-19 right-3 h-14 w-14 p-0 z-50 shadow-lg">
+        <Plus className="size-6" />
+      </Button>
+
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
@@ -188,7 +206,6 @@ export default function VacinasPage() {
         </Dialog.Portal>
       </Dialog.Root>
 
-      {/* Modal de renovar */}
       <Dialog.Root open={!!renewModal} onOpenChange={(open) => !open && setRenewModal(null)}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
@@ -208,12 +225,6 @@ export default function VacinasPage() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
-
-      <div className="px-4 sticky bottom-4 flex w-full justify-between items-center text-center">
-        <Button onClick={() => setOpen(true)} className="w-full h-12 capitalize font-bold text-base">
-          <Plus className="size-6" /> ADICIONAR
-        </Button>
-      </div>
     </>
   );
 }

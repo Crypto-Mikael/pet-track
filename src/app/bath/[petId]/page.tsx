@@ -125,7 +125,7 @@ export default function Page() {
 
   if (!baths) {
     return (
-      <div className="flex flex-col">
+      <>
         <header className="relative py-2 border-b-2 border-border text-center text-3xl text-foreground shrink-0">
           <Button
             className="absolute left-2"
@@ -168,7 +168,7 @@ export default function Page() {
             </div>
           </section>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -246,37 +246,33 @@ export default function Page() {
       <section className="flex flex-col gap-2 p-4 border-t-2 border-border">
         <h2 className="text-xl font-semibold text-foreground mb-2">Histórico de Banhos</h2>
         <div className="border-2 border-border rounded-2xl overflow-hidden">
-          <div className="max-h-[200px] overflow-y-auto">
-            {baths.length ? (
-              <div className="flex flex-col divide-y divide-border">
-                {baths.map((bath, index) => (
-                  <div
-                    key={bath.id}
-                    className="flex items-center justify-between p-4 hover:bg-muted/30"
-                  >
-                    <div>
-                      <div className="text-sm text-muted-foreground">#{index + 1}</div>
-                      <div className="text-base font-semibold">
-                        {intlFormat(bath.date, {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "2-digit",
-                        })}
-                      </div>
+          <div className="max-h-[200px] overflow-y-auto">        
+            <div className="flex flex-col divide-y divide-border">
+              {baths.map((bath, index) => (
+                <div
+                  key={bath.id}
+                  className="flex items-center justify-between p-4 hover:bg-muted/30"
+                >
+                  <div>
+                    <div className="text-sm text-muted-foreground">#{index + 1}</div>
+                    <div className="text-base font-semibold">
+                      {intlFormat(bath.date, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                      })}
                     </div>
-                    <Button
-                      onClick={() => removeBath(bath.id)}
-                      variant="destructive"
-                      className="size-10"
-                    >
-                      <Trash />
-                    </Button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 text-center text-muted-foreground">Nenhum banho registrado ainda</div>
-            )}
+                  <Button
+                    onClick={() => removeBath(bath.id)}
+                    variant="destructive"
+                    className="size-10"
+                  >
+                    <Trash />
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="border-t border-border bg-muted/50 p-3 flex items-center justify-between">
             <div className="font-semibold text-foreground">{baths.length}</div>

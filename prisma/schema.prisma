@@ -41,20 +41,22 @@ model User {
 }
 
 model Animal {
-  id             Int           @id @default(autoincrement())
-  name           String
-  details        String?
-  breed          String
-  imageUrl       String?
-  gender         Gender
-  age            DateTime
-  owner_id       Int
-  owner          User          @relation(fields: [owner_id], references: [id])
-  vaccinations   Vaccination[]
-  bathsCycleDays Int           @default(28) // intervalo ideal em dias
-  baths          Bath[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime
+  id               Int           @id @default(autoincrement())
+  name             String
+  details          String?
+  breed            String
+  imageUrl         String?
+  gender           Gender
+  age              DateTime
+  owner_id         Int
+  owner            User          @relation(fields: [owner_id], references: [id])
+  vaccinations     Vaccination[]
+  bathsCycleDays   Int           @default(28)
+  baths            Bath[]
+  foods            Food[]
+  dailyCalorieGoal Float         @default(500)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime
 
   @@map(name: "animal")
 }
@@ -82,4 +84,21 @@ model Bath {
   updatedAt DateTime
 
   @@map(name: "baths")
+}
+
+model Food {
+  id        Int      @id @default(autoincrement())
+  pet_id    Int
+  animal    Animal   @relation(fields: [pet_id], references: [id])
+  name      String
+  amount    Float
+  kcal      Float
+  protein   Float?
+  fat       Float?
+  carbs     Float?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@map(name: "foods")
 }

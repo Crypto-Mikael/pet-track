@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "animal" ADD COLUMN     "dailyCalorieGoal" DOUBLE PRECISION NOT NULL DEFAULT 500;
