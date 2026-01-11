@@ -14,17 +14,6 @@ export default function ListItem({name, details, imageUrl}: ListItemProps) {
       <div className="p-4 flex flex-col justify-between w-full">
         <h2 className="text-lg font-semibold text-card-foreground">{name}</h2>
         <p className="text-sm text-muted-foreground">{details}</p>
-        <div className="flex self-end">
-          <span className="flex gap-2 text-foreground">
-            <Bubbles />
-            <p>1d</p>
-          </span>
-          <span className="flex gap-2 ml-4 text-foreground">
-            <Syringe />
-            <p>1d</p>
-          </span>
-        </div>
-
       </div>
     </article>
   )

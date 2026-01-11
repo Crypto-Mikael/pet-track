@@ -3,25 +3,30 @@ import { useEffect, useState } from "react";
 import { Animal } from "./generated/prisma";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import CardCount from "@/components/ui/cardCount";
+import CardCount, { DashboardMetrics } from "@/components/ui/cardCount";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
-    const [animals, setAnimals] = useState<Animal[] | null>(null);
+    const [animals, setAnimals] = useState<Animal[] | null | undefined>(null);
     const [tabNumber, setTabNumber] = useState(0);
+    const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
 
     useEffect(() => {
       async function fetchData() {
+        setMetrics(null);
         try {
           const animalResponse = await fetch(`/api/pets`);
+          
           const animalData = await animalResponse.json();
+          const metrics = await fetch(`/api/home?petId=${animalData[tabNumber].id}`);
+          setMetrics(await metrics.json() as DashboardMetrics);
           setAnimals(animalData);
         } catch (error) {
           console.error("Erro ao buscar dados:", error);
         }
       }
     fetchData();
-  }, []);
+  }, [tabNumber]);
 
   if (!animals) {
     return (
@@ -49,7 +54,7 @@ export default function Home() {
           <ArrowRight />
         </Button>
       </header>
-      <CardCount animal={animals[tabNumber]} />
+      <CardCount animal={animals[tabNumber]} metrics={metrics} />
     </>
   );
 }

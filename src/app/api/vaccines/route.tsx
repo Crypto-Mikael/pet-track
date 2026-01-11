@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const petId = Number(searchParams.get("id"));
+  const petId = Number(searchParams.get("petId"));
   if (petId) {
     const vaccinations = await prisma.vaccination.findMany({
       orderBy: {

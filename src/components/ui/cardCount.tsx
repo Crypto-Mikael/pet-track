@@ -10,18 +10,17 @@ import { Skeleton } from "./skeleton";
 import Link from "next/link";
 
 export type DashboardMetrics = {
-  bathsCount?: number;
-  lastBathDate?: string | Date | null;
-  bathPercent?: number;
-  dailyCalories?: number;
-  dailyCalorieGoal?: number;
-  vaccineTotal?: number;
-  vaccineValid?: number;
-  vaccinePercent?: number;
+  bathPercentage: number;
+  bathQtd: number;
+  dailyCaloriePercentage: number;
+  dailyCalories: number;
+  vaccinePercentage: number;
+  vaccineTotal: number;
+  vaccineValid: number;
 };
 
 export default function CardCount({ animal, metrics }: { animal: Animal | null; metrics?: DashboardMetrics | null }) {
-  if (!animal) {
+  if (!animal || !metrics) {
     return (
       <>
         <main className='flex flex-col justify-center items-center px-8 gap-4 h-full'>
@@ -70,21 +69,17 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
         <div className="flex flex-col h-full gap-16 items-center pt-8">
           <div className="flex gap-8">
             <Link href={`/bath/${animal.id}`}>
-              <CircularProgress textValue="Banho" value={metrics?.bathPercent ?? 0} icon={ShowerHead} />
+              <CircularProgress textValue="Banho" value={metrics.bathPercentage} icon={ShowerHead} />
             </Link>
             <Link href={`/food/${animal.id}`}>
               <CircularProgress
                 textValue="Comida"
-                value={
-                  metrics && metrics.dailyCalorieGoal
-                    ? Math.round((metrics.dailyCalories || 0) / metrics.dailyCalorieGoal * 100)
-                    : 0
-                }
+                value={metrics.dailyCaloriePercentage}
                 icon={Bone}
               />
             </Link>
             <Link href={`/vaccine/${animal.id}`}>
-              <CircularProgress textValue="Vacina" value={metrics?.vaccinePercent ?? 0} icon={Syringe} />
+              <CircularProgress textValue="Vacina" value={metrics.vaccinePercentage} icon={Syringe} />
             </Link>
           </div>  
         </div>
@@ -95,7 +90,7 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
             <ShowerHead className="size-12 text-card-foreground rounded-full" />
           </div>
           <div className="relative flex flex-col justify-center hover:border-border/60 border-border border-l-2 p-4 w-full">
-            <h2 className="text-3xl text-card-foreground font-semibold text-center">{metrics?.bathsCount ?? 0}</h2>
+            <h2 className="text-3xl text-card-foreground font-semibold text-center">{metrics.bathQtd}</h2>
             <h1 className="text-2xl text-card-foreground font-semibold text-center">Banhos</h1>
           </div>
         </Link>
@@ -104,7 +99,7 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
             <Bone className="size-12 text-card-foreground rounded-full" />
           </div>
           <div className="relative flex flex-col justify-center hover:border-border/60 border-border border-l-2 p-4 w-full">
-            <h1 className="text-3xl text-card-foreground font-semibold text-center">{metrics?.dailyCalories ?? 0}</h1>
+            <h1 className="text-3xl text-card-foreground font-semibold text-center">{metrics.dailyCalories}</h1>
             <p className="text-2xl text-center font-semibold text-card-foreground">kcal</p>
           </div>
         </Link>
@@ -113,7 +108,7 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
             <Syringe className="size-12 text-card-foreground rounded-full" />
           </div>
           <div className="relative flex flex-col justify-center hover:border-border/60 border-border border-l-2 p-4 w-full">
-            <h1 className="text-3xl text-card-foreground font-semibold text-center">{metrics?.vaccineValid ?? 0}/{metrics?.vaccineTotal ?? 0}</h1>
+            <h1 className="text-3xl text-card-foreground font-semibold text-center">{metrics.vaccineValid} de {metrics.vaccineTotal}</h1>
             <p className="text-2xl text-center font-semibold text-card-foreground">em dia</p>
           </div>
         </Link>

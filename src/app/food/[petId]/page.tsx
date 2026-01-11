@@ -40,14 +40,11 @@ export default function DietPage() {
   const fetchFoods = async (petId: string, selectedDate: Date) => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
-    // Converter a data para timezone local
     const localDate = toZonedTime(selectedDate, timeZone);
     
-    // Pegar o início e fim do dia em timezone local
     const dayStart = startOfDay(localDate);
     const dayEnd = endOfDay(localDate);
     
-    // Converter de volta para UTC para enviar na requisição
     const startDateUTC = dayStart.toISOString();
     const endDateUTC = new Date(dayEnd.getTime()).toISOString();
     

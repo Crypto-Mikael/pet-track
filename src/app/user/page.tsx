@@ -1,6 +1,7 @@
 import { ModeToggle } from '@/components/feat/ModeToggle';
 import { Button } from '@/components/ui/button';
-import { currentUser } from '@clerk/nextjs/server'
+import { SignOutButton } from '@clerk/nextjs';
+import { clerkClient, currentUser } from '@clerk/nextjs/server'
 import { intlFormat } from "date-fns";
 
 export default async function Page() {
@@ -57,7 +58,9 @@ export default async function Page() {
           <h2 className="text-lg font-semibold self-start text-card-foreground">Tema</h2>
           <ModeToggle />
         </div>
-        <Button className="bg-destructive border-2 border-border p-4 rounded-2xl text-3xl h-12" variant="destructive">Sair</Button>
+        <SignOutButton>
+          <Button  className="bg-destructive border-2 border-border p-4 rounded-2xl text-3xl h-12" variant="destructive">Sair</Button>
+        </SignOutButton>
       </section>
     </div>
   );
