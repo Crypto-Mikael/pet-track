@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
       },
       where: { petId },
     });
-    console.log("Vaccines:", vaccinations);
     const vaccinePercentage =
       calculateValidVaccinePercentage(vaccinations) ?? 0;
     return NextResponse.json(
