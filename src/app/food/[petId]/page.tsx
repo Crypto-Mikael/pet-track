@@ -7,7 +7,6 @@ import { Plus, Trash2, ArrowLeft, Bone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useParams, useRouter } from "next/navigation";
-import { Food, Animal } from "@/app/generated/prisma";
 import { CircularProgress } from "@/components/ui/circularProgress";
 import {
   Dialog,
@@ -16,15 +15,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Animal, Food } from "@/lib/schema";
 
 function calculateDailyCalories(foods: Food[] | null): number {
   if (!foods || foods.length === 0) return 0;
-  return foods.reduce((sum, f) => sum + f.kcal, 0);
+  return foods.reduce((sum, f) => sum + Number(f.kcal), 0);
 }
 
-function calculateCaloriePercentage(foods: Food[] | null, goal: number): number {
+function calculateCaloriePercentage(foods: Food[] | null, goal: string): number {
   const dailyCalories = calculateDailyCalories(foods);
-  return Math.round((dailyCalories / goal) * 100);
+  return Math.round((dailyCalories / Number(goal)) * 100);
 }
 
 export default function DietPage() {
@@ -90,7 +90,7 @@ export default function DietPage() {
         const res = await fetch("/api/foods", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data, pet_id: Number(params.petId) }),
+          body: JSON.stringify(data),
         });
         const newFood = await res.json() as Food;
         setFoods(prev => prev ? [newFood, ...prev] : [newFood]);
@@ -143,7 +143,7 @@ export default function DietPage() {
       <section className="p-4 bg-muted/30 flex flex-col gap-4 border-b-2 border-border">
         {animal === null || foods === null ? (
           <div className="flex flex-col items-center gap-4">
-            <Skeleton className="w-[188px] h-[188px] rounded-full" />
+            <Skeleton className="size-47 rounded-full" />
             <Skeleton className="w-40 h-6" />
           </div>
         ) : (
@@ -235,7 +235,7 @@ export default function DietPage() {
       <Button
         onClick={() => {
           setEditingFood(null);
-          reset({ amount: 0, kcal: 0 });
+          reset({ amount: "0", kcal: "0" });
           setOpen(true);
         }}
         className="rounded-full fixed bottom-20 right-6 h-14 w-14 p-0 z-50 shadow-lg"

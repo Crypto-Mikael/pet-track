@@ -1,4 +1,3 @@
-import { Animal } from "@/app/generated/prisma";
 
 import Image from "next/image";
 
@@ -8,6 +7,7 @@ import { CircularProgress } from "./circularProgress";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "./skeleton";
 import Link from "next/link";
+import { Animal } from "@/lib/schema";
 
 export type DashboardMetrics = {
   bathPercentage: number;
@@ -60,10 +60,10 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
         />
         <div>
           <h1 className="text-6xl text-center text-foreground font-semibold">
-            { formatDistance(new Date(), animal.age, { locale: ptBR }).split(' ')[0] }
+            { formatDistance(new Date(), animal.age, { locale: ptBR }).split(" ")[2] }
           </h1>
           <p className="text-foreground text-center text-3xl font-semibold capitalize">
-            { formatDistance(new Date(), animal.age, { locale: ptBR }).split(' ')[1] }
+            { formatDistance(new Date(), animal.age, { locale: ptBR }).split(" ")[3] }
           </p>
         </div>
         <div className="flex flex-col h-full gap-16 items-center pt-8">

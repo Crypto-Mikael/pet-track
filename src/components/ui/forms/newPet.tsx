@@ -67,11 +67,12 @@ export const catBreeds = [
 const formSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
   details: z.string().optional(),
-  breed: z.string({ required_error: "Por favor, selecione uma raça." }),
-  age: z.date({ required_error: "Por favor, selecione a data de nascimento." }),
+  breed: z.string({ error: "Por favor, selecione uma raça." }),
+  age: z.date({ error: "Por favor, selecione a data de nascimento." }),
   lastBath: z.date().optional(),
   lastVaccine: z.date().optional(),
   blob: z.unknown().optional(),
+  weightKg: z.string().optional(),
   gender: z.enum(["male", "female"]),
   animalType: z.enum(["dog", "cat", "other"]),
 });
@@ -94,6 +95,7 @@ export default function NewPetForm() {
       breed: "vira-lata",
       blob: null,
       gender: "male",
+      weightKg: "",
       animalType: "dog",
     },
   });
@@ -112,7 +114,7 @@ export default function NewPetForm() {
     }
   };
 
-  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, lastVaccine }: FormValues) => {
+  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, lastVaccine, weightKg }: FormValues) => {
     try {
       // Faz o upload da imagem usando a função customizada
       const fileUrl = await uploadFile(blob as File);
@@ -122,6 +124,7 @@ export default function NewPetForm() {
         details,
         breed,
         gender,
+        weightKg,
         age: age.toISOString(),
         lastBath: lastBath?.toISOString(),
         lastVaccine: lastVaccine?.toISOString(),
@@ -280,6 +283,17 @@ export default function NewPetForm() {
               </RadioGroup>
             )}
           />
+
+          {/* Peso */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="weightKg">Peso (kg)</Label>
+            <Controller
+              name="weightKg"
+              control={control}
+              render={({ field }) => <Input type="number" id="weightKg" {...field} placeholder="Peso em kg" />}
+            />
+            {errors.weightKg && <span className="text-destructive text-sm">{errors.weightKg.message}</span>}
+          </div>
 
           {/* Raça */}
           {watch("animalType") !== "other" && (

@@ -1,7 +1,9 @@
 import { Webhook } from "svix";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import db from "@/lib/db";
+import { users } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 export const runtime = "nodejs"; // garante ambiente Node puro
 
@@ -35,19 +37,28 @@ export async function POST(req: NextRequest) {
   if (evt.type === "user.created") {
     const { id, email_addresses, first_name, last_name } = evt.data;
 
-    await prisma.user.upsert({
-      where: { clerkId: id },
-      update: {},
-      create: {
+    const email = email_addresses?.[0]?.email_address ?? "";
+    const name = `${first_name ?? ""} ${last_name ?? ""}`.trim();
+
+    await db
+      .insert(users)
+      .values({
         clerkId: id,
-        email: email_addresses?.[0]?.email_address ?? "",
-        name: `${first_name ?? ""} ${last_name ?? ""}`.trim(),
+        email,
+        name,
         cpf: "",
         phone: "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    });
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [users.clerkId],
+        set: {
+          email,
+          name,
+          updatedAt: new Date(),
+        },
+      });
   }
 
   return NextResponse.json({ ok: true });

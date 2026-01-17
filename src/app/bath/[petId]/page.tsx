@@ -9,7 +9,6 @@ import {
   ShowerHead,
   Trash,
 } from "lucide-react";
-import { Animal, Bath } from "@/app/generated/prisma";
 import { Button } from "@/components/ui/button";
 import HoldToConfirmButton from "@/components/ui/buttonHold";
 import { CircularProgress } from "@/components/ui/circularProgress";
@@ -24,6 +23,7 @@ import {
 import { DatePickerField } from "@/components/ui/datePickerField";
 import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
+import { Animal, Bath } from "@/lib/schema";
 
 export default function Page() {
   const params = useParams<{ petId: string }>();
