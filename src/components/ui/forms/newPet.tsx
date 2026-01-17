@@ -70,7 +70,6 @@ const formSchema = z.object({
   breed: z.string({ error: "Por favor, selecione uma raça." }),
   age: z.date({ error: "Por favor, selecione a data de nascimento." }),
   lastBath: z.date().optional(),
-  lastVaccine: z.date().optional(),
   blob: z.unknown().optional(),
   weightKg: z.string().optional(),
   gender: z.enum(["male", "female"]),
@@ -114,9 +113,8 @@ export default function NewPetForm() {
     }
   };
 
-  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, lastVaccine, weightKg }: FormValues) => {
+  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, weightKg }: FormValues) => {
     try {
-      // Faz o upload da imagem usando a função customizada
       const fileUrl = await uploadFile(blob as File);
 
       const body = {
@@ -127,7 +125,6 @@ export default function NewPetForm() {
         weightKg,
         age: age.toISOString(),
         lastBath: lastBath?.toISOString(),
-        lastVaccine: lastVaccine?.toISOString(),
         imageUrl: fileUrl,
       };
 
@@ -140,7 +137,9 @@ export default function NewPetForm() {
       if (!petResponse.ok) {
         throw new Error("Falha ao criar o pet.");
       }
-      window.location.href = "/pets";
+      if (petResponse.ok) {
+        window.location.href = "/";
+      }
     } catch (error) {
       console.error("Erro ao criar o pet:", error);
     }
@@ -358,44 +357,6 @@ export default function NewPetForm() {
                 )}
             />
             {errors.lastBath && <span className="text-destructive text-sm">{errors.lastBath.message}</span>}
-        </div>
-
-        {/* Última Vacina */}
-        <div className="flex flex-col gap-2">
-            <Label htmlFor="lastVaccine">Última Vacina</Label>
-            <Controller
-                name="lastVaccine"
-                control={control}
-                render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                    format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                    <span>Selecione uma data</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1990-01-01")
-                                }
-                                captionLayout="dropdown"
-                            />
-                        </PopoverContent>
-                    </Popover>
-                )}
-            />
-            {errors.lastVaccine && <span className="text-destructive text-sm">{errors.lastVaccine.message}</span>}
         </div>
 
         {/* Botão */}

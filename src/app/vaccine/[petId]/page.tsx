@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as Dialog from "@radix-ui/react-dialog";
 import { format, differenceInDays, isBefore } from "date-fns";
@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton"; // <--- seu componente Skeleton
 import { useParams, useRouter } from "next/navigation";
 import { DatePickerField } from "@/components/ui/datePickerField";
-import { Vaccination } from "@/app/generated/prisma";
 import { CircularProgress } from "@/components/ui/circularProgress";
+import { Vaccination } from "@/lib/schema";
 
 function statusOf(v: Vaccination) {
   const dias = differenceInDays(v.expirationDate, new Date());
@@ -19,8 +19,8 @@ function statusOf(v: Vaccination) {
   return "ok";
 }
 
-function calculateValidVaccinePercentage(vaccines: Vaccination[] | null) {
-  if (!vaccines || vaccines.length === 0) return null;
+function calculateValidVaccinePercentage(vaccines: Vaccination[] | 0 | null) {
+  if (!vaccines || vaccines.length === 0) return 0;
   
   const validVaccines = vaccines.filter(v => !isBefore(v.expirationDate, new Date()));
   return Math.round((validVaccines.length / vaccines.length) * 100);
@@ -46,7 +46,7 @@ export default function VacinasPage() {
     async function getData() {
       setVacinas(null); // começa o loading
       const vaccines = await fetchVaccines(params.petId);
-      setVacinas(vaccines);
+      setVacinas(vaccines ?? []);
     }
     getData();
   }, [params.petId]);

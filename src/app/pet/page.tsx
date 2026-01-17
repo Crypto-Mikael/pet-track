@@ -1,22 +1,67 @@
+'use client';
+import { Button } from "@/components/ui/button";
+import HoldToConfirmButton from "@/components/ui/buttonHold";
 import CardNew from "@/components/ui/cardNew";
 import ListItem from "@/components/ui/listItem";
-import db from "@/lib/db";
-import { animal, users } from "@/lib/schema";
-import { currentUser } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { Animal, users } from "@/lib/schema";
+import { Edit, List, Trash } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
+export default function Page() {
+    const [animals, setAnimals] = useState<Animal[] | null >(null);
 
-export default async function Page() {
-  const clerkUser = await currentUser();
-  const user = await db.select().from(users).where(eq(users.clerkId, clerkUser?.id || '')).limit(1);
-  const animals = await db.select().from(animal).where(eq(animal.ownerId, user[0].id));
+    const deleteAnimal = async (id: number) => {
+      try {
+        await fetch(`/api/pets?id=${id}`, {
+          method: 'DELETE',
+        })
+        setAnimals(prevAnimals => prevAnimals ? prevAnimals.filter(animal => animal.id !== id) : null);
+        
+      } catch (error) {
+        
+      }
+    }
+
+    useEffect(() => {
+      async function fetchData() {
+        try {
+          const animalResponse = await fetch(`/api/pets`);
+          const animalData = await animalResponse.json() as Animal[];
+          setAnimals(animalData);
+        } catch (error) {
+          console.error("Erro ao buscar dados:", error);
+        }
+      }
+      fetchData();
+
+  }, []);
+
+  if (!animals) {
+    return (
+      <>
+        <h1 className="text-3xl text-foreground text-center border-b-2 border-border py-2">Pets</h1>
+        <main className="flex flex-col gap-4 p-4">
+          <CardNew />
+          <ListItem props={null} />
+        </main>
+      </>
+    );
+  }
   return (
     <>
       <h1 className="text-3xl text-foreground text-center border-b-2 border-border py-2">Pets</h1>
       <main className="flex flex-col gap-4 p-4">
         <CardNew />
-        {animals?.map(animal => (
-          <ListItem key={animal.id} name={animal.name} details={animal.details ?? ''} imageUrl={animal.imageUrl}/>
+        {animals.map(animal => (
+          <div className="flex items-center  gap-4" key={animal.id}>
+            <Link className="grow" href={`/pet/${animal.id}`}>
+              <ListItem props={{ name: animal.name, details: animal.details ?? '', imageUrl: animal.imageUrl }} />
+            </Link>
+            <div className="flex justify-between flex-col ">
+              <HoldToConfirmButton icon={<Trash className="z-50" />} progressColor="bg-destructive" buttonText="" onHoldFinished={() => {deleteAnimal(animal.id)}}></HoldToConfirmButton>
+            </div>
+          </div>
         ))}
       </main>
     </>

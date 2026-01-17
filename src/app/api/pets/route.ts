@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    await db
+    const [pet] = await db
       .insert(animal)
       .values({
         name: body.name,
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     await db
       .insert(baths)
       .values({
-        petId: body.petId as number,
+        petId: pet.id,
         date: new Date(body.lastBath),
         notes: "",
         createdAt: new Date(),
@@ -115,7 +115,27 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
-
+export async function DELETE(request: NextRequest) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    const { searchParams } = new URL(request.url);
+    const petId = Number(searchParams.get("id"));
+    if (!petId) {
+      return new NextResponse("Pet ID required", { status: 404 });
+    }
+    const petRes = await db
+      .delete(animal)
+      .where(eq(animal.id, petId))
+      .returning();
+    return NextResponse.json(petRes[0], { status: 200 });
+  } catch (error) {
+    console.error("Failed to delete pet:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
 export async function PUT(request: NextRequest) {
   try {
     const clerkUser = await currentUser();

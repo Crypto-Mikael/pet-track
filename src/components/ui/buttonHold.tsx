@@ -6,8 +6,9 @@ type HoldToConfirmButtonProps = {
   onHoldFinished: () => void;
   holdDuration?: number;
   onProgressChange?: (percent: number) => void;
-  buttonText: string;
+  buttonText?: string;
   className?: string;
+  icon?: React.ReactNode;
   progressColor?: string; // ex: "bg-primary" ou "linear-gradient(...)"
 };
 
@@ -17,6 +18,7 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
   onProgressChange,
   buttonText = "Dar banho",
   className,
+  icon,
   progressColor = "bg-primary",
 }) => {
   const [progress, setProgress] = useState(0);
@@ -90,6 +92,7 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
       disabled={completed}
     >
       {/* Sem transition — atualizamos a largura diretamente por requestAnimationFrame */}
+      {icon}
       <div
         className={cn("absolute left-0 top-0 h-full", progressColor)}
         style={{
@@ -98,9 +101,9 @@ const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
         }}
         aria-hidden
       />
-      <span className="relative font-bold text-base z-10 whitespace-nowrap select-none">
+      {buttonText && <span className="relative font-bold text-base z-10 whitespace-nowrap select-none">
         {buttonText}
-      </span>
+      </span>}
     </Button>
   );
 };

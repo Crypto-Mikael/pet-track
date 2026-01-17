@@ -259,7 +259,7 @@ export default function Page() {
                       {intlFormat(bath.date, {
                         day: "2-digit",
                         month: "2-digit",
-                        year: "2-digit",
+                        year: "numeric",
                       })}
                     </div>
                   </div>

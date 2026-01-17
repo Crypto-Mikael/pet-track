@@ -18,7 +18,7 @@ export default function NavBar() {
 
   return (
     <nav className={`sm:hidden sticky w-full flex justify-around bottom-0 bg-background z-50`}>
-      <div className="px-1 py-4 w-full gap-4 flex justify-around border-t-1 border-t-border">
+      <div className="px-1 py-4 w-full gap-4 flex justify-around border-t border-t-border">
         {navItems.map(({ href, icon: Icon }) => (
           <Button
             key={href}
