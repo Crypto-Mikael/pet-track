@@ -6,17 +6,17 @@ CREATE TABLE "animal" (
 	"imageUrl" text,
 	"gender" text NOT NULL,
 	"age" timestamp NOT NULL,
-	"owner_id" integer NOT NULL,
+	"ownerId" integer NOT NULL,
 	"weightKg" numeric NOT NULL,
-	"bathsCycleDays" integer DEFAULT 28,
-	"dailyCalorieGoal" numeric DEFAULT 500,
+	"bathsCycleDays" integer DEFAULT 28 NOT NULL,
+	"dailyCalorieGoal" numeric DEFAULT '500' NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "baths" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"pet_id" integer NOT NULL,
+	"petId" integer NOT NULL,
 	"date" timestamp NOT NULL,
 	"notes" text,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
@@ -25,16 +25,16 @@ CREATE TABLE "baths" (
 --> statement-breakpoint
 CREATE TABLE "foods" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"pet_id" integer NOT NULL,
+	"petId" integer NOT NULL,
 	"name" text NOT NULL,
-	"amount" numeric NOT NULL,
+	"amount" numeric,
 	"kcal" numeric NOT NULL,
 	"protein" numeric,
 	"fat" numeric,
 	"carbs" numeric,
 	"notes" text,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp NOT NULL
+	"createdAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"updatedAt" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -45,7 +45,8 @@ CREATE TABLE "users" (
 	"phone" text,
 	"email" text NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp NOT NULL
+	"updatedAt" timestamp NOT NULL,
+	CONSTRAINT "users_clerkId_unique" UNIQUE("clerkId")
 );
 --> statement-breakpoint
 CREATE TABLE "vaccinations" (

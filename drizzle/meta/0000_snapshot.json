@@ -1,5 +1,5 @@
 {
-  "id": "d1f0babd-7ab3-4ce8-b243-7883bfd62fa9",
+  "id": "26bb5fbc-873c-4534-9084-197bcdd4b3bf",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -50,8 +50,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "owner_id": {
-          "name": "owner_id",
+        "ownerId": {
+          "name": "ownerId",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -66,15 +66,15 @@
           "name": "bathsCycleDays",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": 28
         },
         "dailyCalorieGoal": {
           "name": "dailyCalorieGoal",
           "type": "numeric",
           "primaryKey": false,
-          "notNull": false,
-          "default": 500
+          "notNull": true,
+          "default": "'500'"
         },
         "createdAt": {
           "name": "createdAt",
@@ -108,8 +108,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "pet_id": {
-          "name": "pet_id",
+        "petId": {
+          "name": "petId",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -158,8 +158,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "pet_id": {
-          "name": "pet_id",
+        "petId": {
+          "name": "petId",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -174,7 +174,7 @@
           "name": "amount",
           "type": "numeric",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "kcal": {
           "name": "kcal",
@@ -208,14 +208,14 @@
         },
         "createdAt": {
           "name": "createdAt",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
         "updatedAt": {
           "name": "updatedAt",
-          "type": "timestamp",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         }
@@ -285,7 +285,15 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "users_clerkId_unique": {
+          "name": "users_clerkId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "clerkId"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

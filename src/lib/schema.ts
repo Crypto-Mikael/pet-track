@@ -58,7 +58,7 @@ export const foods = pgTable("foods", {
   id: serial("id").primaryKey(),
   petId: integer("petId").notNull(),
   name: text("name").notNull(),
-  amount: numeric("amount").notNull(),
+  amount: numeric("amount"),
   kcal: numeric("kcal").notNull(),
   protein: numeric("protein"),
   fat: numeric("fat"),
@@ -72,7 +72,7 @@ export const foods = pgTable("foods", {
 
 type Animal = typeof animal.$inferSelect;
 type Bath = typeof baths.$inferSelect;
-type Food = typeof foods.$inferSelect;
+type Food = typeof foods.$inferInsert;
 type User = typeof users.$inferSelect;
 type Vaccination = typeof vaccinations.$inferSelect;
 export type { Animal, Bath, Food, User, Vaccination };

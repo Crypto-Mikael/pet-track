@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-import { foods, animal } from "@/lib/schema";
+import { foods, animal, Food } from "@/lib/schema";
 import { eq, gte, lte, and, desc } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
@@ -80,22 +80,19 @@ export async function POST(request: NextRequest) {
         { status: 404 },
       );
     }
-
-    const [created] = await db
-      .insert(foods)
-      .values({
-        petId: Number(petId),
-        name,
-        amount: amount !== undefined ? Number(amount) : null,
-        kcal: Number(kcal),
-        protein: protein !== undefined ? Number(protein) : null,
-        fat: fat !== undefined ? Number(fat) : null,
-        carbs: carbs !== undefined ? Number(carbs) : null,
-        notes: notes || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
+    const food = {
+      petId: Number(petId),
+      name: name,
+      amount: amount !== undefined ? Number(amount) : null,
+      kcal: kcal,
+      protein: protein !== undefined ? Number(protein) : null,
+      fat: fat !== undefined ? Number(fat) : null,
+      carbs: carbs !== undefined ? Number(carbs) : null,
+      notes: notes || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Food;
+    const [created] = await db.insert(foods).values(food).returning();
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
