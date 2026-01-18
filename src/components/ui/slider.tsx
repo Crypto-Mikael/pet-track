@@ -68,7 +68,8 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                     {hasMarks &&
                         <div className="absolute inset-0 flex grow w-full items-center justify-between px-[7px] cursor-pointer">
                             {Array.from({length: space + 1}).map((_, index) => (
-                                <div className="w-1 h-2 rounded-full bg-primary" key={index}></div>
+                                // biome-ignore lint/suspicious/noArrayIndexKey: static slider marks
+                                <div key={`mark-${index}`} className="w-1 h-2 rounded-full bg-primary" />
                             ))}
                         </div>
                     }

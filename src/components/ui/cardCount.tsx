@@ -7,7 +7,7 @@ import { CircularProgress } from "./circularProgress";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "./skeleton";
 import Link from "next/link";
-import { Animal } from "@/lib/schema";
+import type { Animal } from "@/lib/schema";
 
 export type DashboardMetrics = {
   bathPercentage: number;

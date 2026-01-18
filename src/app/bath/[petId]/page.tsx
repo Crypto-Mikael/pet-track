@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useForm, FieldValues } from "react-hook-form";
+import { useForm, type FieldValues } from "react-hook-form";
 import { differenceInDays, intlFormat } from "date-fns";
 import {
   ArrowLeft,
@@ -23,7 +23,19 @@ import {
 import { DatePickerField } from "@/components/ui/datePickerField";
 import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
-import { Animal, Bath } from "@/lib/schema";
+import type { Animal, Bath } from "@/lib/schema";
+
+async function fetchBaths(petId: number): Promise<Bath[]> {
+  const res = await fetch(`/api/baths?id=${petId}`);
+  if (!res.ok) throw new Error("Erro ao buscar banhos");
+  return res.json();
+}
+
+async function fetchAnimal(petId: number): Promise<Animal> {
+  const res = await fetch(`/api/pets?id=${petId}`);
+  if (!res.ok) throw new Error("Erro ao buscar animal");
+  return res.json();
+}
 
 export default function Page() {
   const params = useParams<{ petId: string }>();
@@ -38,36 +50,24 @@ export default function Page() {
   const [baths, setBaths] = useState<Bath[] | null>(null);
   const [daysWithoutBath, setDaysWithoutBath] = useState<number | null>(null);
 
-  // --- Fetchers ---
-  const fetchBaths = async (petId: number): Promise<Bath[]> => {
-    const res = await fetch(`/api/baths?id=${petId}`);
-    if (!res.ok) throw new Error("Erro ao buscar banhos");
-    return res.json();
-  };
+   // --- Effects ---
+   useEffect(() => {
+     const loadData = async () => {
+       try {
+         const petId = Number(params.petId);
+         const [bathsData, animalData] = await Promise.all([
+           fetchBaths(petId),
+           fetchAnimal(petId),
+         ]);
+         setBaths(bathsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+         setBathWeeks([animalData.bathsCycleDays / 7]);
+       } catch (err) {
+         console.error("Erro ao carregar dados:", err);
+       }
+     };
 
-  const fetchAnimal = async (petId: number): Promise<Animal> => {
-    const res = await fetch(`/api/pets?id=${petId}`);
-    if (!res.ok) throw new Error("Erro ao buscar animal");
-    return res.json();
-  };
-
-  // --- Effects ---
-  useEffect(() => {
-    const loadData = async () => {
-    try {
-      const [bathsData, animalData] = await Promise.all([
-        fetchBaths(Number(params.petId)),
-        fetchAnimal(Number(params.petId)),
-      ]);
-      setBaths(bathsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      setBathWeeks([animalData.bathsCycleDays / 7]);
-    } catch (err) {
-      console.error("Erro ao carregar dados:", err);
-    }
-  };
-
-  loadData();
-  }, [params.petId]);
+     loadData();
+   }, [params.petId]);
 
   useEffect(() => {
     if (!baths || baths.length === 0) {

@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
-import CardCount, { DashboardMetrics } from "@/components/ui/cardCount";
+import CardCount, { type DashboardMetrics } from "@/components/ui/cardCount";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Animal } from "@/lib/schema";
+import type { Animal } from "@/lib/schema";
 import CardNew from "@/components/ui/cardNew";
 
 export default function Home() {
@@ -16,7 +16,7 @@ export default function Home() {
 
       async function fetchData() {
         try {
-          const animalResponse = await fetch(`/api/pets`);
+           const animalResponse = await fetch("/api/pets");
           
           const animalData = await animalResponse.json() as Animal[];
           if (animalData.length === 0) {

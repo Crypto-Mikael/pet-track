@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import CardCount, { DashboardMetrics } from "@/components/ui/cardCount";
+import CardCount, { type DashboardMetrics } from "@/components/ui/cardCount";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Animal } from "@/lib/schema";
+import type { Animal } from "@/lib/schema";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 

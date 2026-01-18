@@ -1,13 +1,13 @@
 import { differenceInDays, endOfToday, isBefore, startOfToday } from "date-fns";
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import {
   animal,
   foods,
   baths,
   vaccinations,
-  Vaccination,
-  Food,
+  type Vaccination,
+  type Food,
 } from "@/lib/schema";
 import { eq, gte, lte, and, asc, desc } from "drizzle-orm";
 

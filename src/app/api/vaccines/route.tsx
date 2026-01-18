@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { vaccinations } from "@/lib/schema";
 import { eq, asc } from "drizzle-orm";
@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest) {
     return new NextResponse("Missing required fields", { status: 400 });
   }
 
-  const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
   if (body.vaccineName) updateData.vaccineName = body.vaccineName;
   if (body.applicationDate) updateData.applicationDate = new Date(body.applicationDate);
   if (body.expirationDate) updateData.expirationDate = new Date(body.expirationDate);

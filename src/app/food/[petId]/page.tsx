@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Animal, Food } from "@/lib/schema";
+import type { Animal, Food } from "@/lib/schema";
 
 function calculateDailyCalories(foods: Food[] | null): number {
   if (!foods || foods.length === 0) return 0;
@@ -27,6 +27,26 @@ function calculateCaloriePercentage(foods: Food[] | null, goal: string): number 
   return Math.round((dailyCalories / Number(goal)) * 100);
 }
 
+async function fetchFoods(petId: string, selectedDate: Date): Promise<Food[]> {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  const localDate = toZonedTime(selectedDate, timeZone);
+  
+  const dayStart = startOfDay(localDate);
+  const dayEnd = endOfDay(localDate);
+  
+  const startDateUTC = dayStart.toISOString();
+  const endDateUTC = new Date(dayEnd.getTime()).toISOString();
+  
+  const res = await fetch(`/api/foods?petId=${petId}&startDate=${startDateUTC}&endDate=${endDateUTC}`);
+  return await res.json() as Food[];
+}
+
+async function fetchAnimal(petId: string): Promise<Animal> {
+  const res = await fetch(`/api/pets?id=${petId}`);
+  return await res.json() as Animal;
+}
+
 export default function DietPage() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
@@ -36,26 +56,6 @@ export default function DietPage() {
   const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString());
   const { register, handleSubmit, reset } = useForm<Partial<Food>>();
-
-  const fetchFoods = async (petId: string, selectedDate: Date) => {
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    const localDate = toZonedTime(selectedDate, timeZone);
-    
-    const dayStart = startOfDay(localDate);
-    const dayEnd = endOfDay(localDate);
-    
-    const startDateUTC = dayStart.toISOString();
-    const endDateUTC = new Date(dayEnd.getTime()).toISOString();
-    
-    const res = await fetch(`/api/foods?petId=${petId}&startDate=${startDateUTC}&endDate=${endDateUTC}`);
-    return await res.json() as Food[];
-  };
-
-  const fetchAnimal = async (petId: string) => {
-    const res = await fetch(`/api/pets?id=${petId}`);
-    return await res.json() as Animal;
-  };
 
   useEffect(() => {
     async function loadData() {
@@ -126,17 +126,18 @@ export default function DietPage() {
       </header>
 
       <section className="p-4 border-b-2 border-border flex items-center justify-center">
-        <div className="w-full max-w-md">
-          <label className="block text-sm font-semibold mb-2">Data</label>
-          <input
-            type="date"
-            value={selectedDate.split('T')[0]}
-            onChange={(e) => {
-              const localDate = parse(e.target.value, 'yyyy-MM-dd', new Date());
-              setSelectedDate(localDate.toISOString());
-            }}
-            className="w-full border border-border rounded px-3 py-2 bg-background text-foreground text-sm"
-          />
+         <div className="w-full max-w-md">
+           <label htmlFor="date-input" className="block text-sm font-semibold mb-2">Data</label>
+           <input
+             id="date-input"
+             type="date"
+             value={selectedDate.split('T')[0]}
+             onChange={(e) => {
+               const localDate = parse(e.target.value, 'yyyy-MM-dd', new Date());
+               setSelectedDate(localDate.toISOString());
+             }}
+             className="w-full border border-border rounded px-3 py-2 bg-background text-foreground text-sm"
+           />
         </div>
       </section>
 
@@ -162,9 +163,10 @@ export default function DietPage() {
       </section>
 
       <section className="flex flex-col gap-4 p-4 h-[calc(100dvh-300px)] overflow-y-auto">
-        {foods === null ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-lg p-4 bg-card border-2 border-border flex flex-col gap-3 animate-pulse">
+         {foods === null ? (
+           Array.from({ length: 3 }).map((_, i) => (
+             // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton loader
+             <div key={`skeleton-${i}`} className="rounded-lg p-4 bg-card border-2 border-border flex flex-col gap-3 animate-pulse">
               <Skeleton className="h-6 w-32" />
               <Skeleton className="h-5 w-24" />
               <Skeleton className="h-5 w-20" />
@@ -249,74 +251,81 @@ export default function DietPage() {
             <DialogTitle>{editingFood ? "Editar Refeição" : "Adicionar Refeição"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
-            <div>
-              <label className="block text-sm font-semibold mb-1">Nome da Refeição</label>
-              <input
-                {...register("name", { required: true })}
-                className="w-full border border-border rounded p-2 bg-background text-foreground"
-                placeholder="Ex: Ração, Fruta, Snack"
-              />
+             <div>
+               <label htmlFor="food-name" className="block text-sm font-semibold mb-1">Nome da Refeição</label>
+               <input
+                 id="food-name"
+                 {...register("name", { required: true })}
+                 className="w-full border border-border rounded p-2 bg-background text-foreground"
+                 placeholder="Ex: Ração, Fruta, Snack"
+               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-semibold mb-1">Quantidade (g)</label>
-                <input
-                  {...register("amount", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground"
-                  placeholder="0"
-                />
+               <div>
+                 <label htmlFor="food-amount" className="block text-sm font-semibold mb-1">Quantidade (g)</label>
+                 <input
+                   id="food-amount"
+                   {...register("amount", { valueAsNumber: true })}
+                   type="number"
+                   step="0.1"
+                   className="w-full border border-border rounded p-2 bg-background text-foreground"
+                   placeholder="0"
+                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Calorias (kcal)</label>
-                <input
-                  {...register("kcal", { valueAsNumber: true, required: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground"
-                  placeholder="0"
-                />
+               <div>
+                 <label htmlFor="food-kcal" className="block text-sm font-semibold mb-1">Calorias (kcal)</label>
+                 <input
+                   id="food-kcal"
+                   {...register("kcal", { valueAsNumber: true, required: true })}
+                   type="number"
+                   step="0.1"
+                   className="w-full border border-border rounded p-2 bg-background text-foreground"
+                   placeholder="0"
+                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs font-semibold mb-1">Proteína (g)</label>
-                <input
-                  {...register("protein", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
+               <div>
+                 <label htmlFor="food-protein" className="block text-xs font-semibold mb-1">Proteína (g)</label>
+                 <input
+                   id="food-protein"
+                   {...register("protein", { valueAsNumber: true })}
+                   type="number"
+                   step="0.1"
+                   className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
+                   placeholder="0"
+                 />
+              </div>
+               <div>
+                 <label htmlFor="food-fat" className="block text-xs font-semibold mb-1">Gordura (g)</label>
+                 <input
+                   id="food-fat"
+                   {...register("fat", { valueAsNumber: true })}
+                   type="number"
+                   step="0.1"
                   className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
                   placeholder="0"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Gordura (g)</label>
-                <input
-                  {...register("fat", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Carbos (g)</label>
-                <input
-                  {...register("carbs", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
-                  placeholder="0"
-                />
+               <div>
+                 <label htmlFor="food-carbs" className="block text-xs font-semibold mb-1">Carbos (g)</label>
+                 <input
+                   id="food-carbs"
+                   {...register("carbs", { valueAsNumber: true })}
+                   type="number"
+                   step="0.1"
+                   className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
+                   placeholder="0"
+                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold mb-1">Observações</label>
-              <textarea
+             <div>
+               <label htmlFor="food-notes" className="block text-sm font-semibold mb-1">Observações</label>
+               <textarea
+                 id="food-notes"
                 {...register("notes")}
                 className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
                 placeholder="Ex: Com tempero, sem sal"

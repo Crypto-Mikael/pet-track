@@ -1,6 +1,6 @@
 import { Webhook } from "svix";
-import { WebhookEvent } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from "next/server";
+import type { WebhookEvent } from "@clerk/nextjs/server";
+import { type NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
