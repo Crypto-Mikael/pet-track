@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
 import type { Animal, Bath } from "@/lib/schema";
 import { getBaths, createBath, deleteBath } from "@/app/actions/bath";
-import { getAnimal } from "@/app/actions/pet";
+import { getAnimal, updateBathsCycleDays } from "@/app/actions/pet";
 
 export default function Page() {
   const params = useParams<{ petId: string }>();
@@ -99,12 +99,9 @@ export default function Page() {
      }
    };
 
-  const onCycleChange = async () => {
-    await fetch(`/api/pets?id=${params.petId}&bathsCycleDays=${bathWeeks[0] * 7}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-    });
-  };
+   const onCycleChange = async () => {
+     await updateBathsCycleDays(params.petId, bathWeeks[0] * 7);
+   };
 
    const removeBath = async (bathId: number) => {
      try {

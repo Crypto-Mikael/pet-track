@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Mars, Venus } from "lucide-react";
 import { ImageCropper } from "../input/imageCropper";
 import { useUploadThing } from "@/app/api/uploadthing/utils";
+import { createAnimal } from "@/app/actions/pet";
 
 export const dogBreeds = [
   { label: "Vira-lata (SRD)", value: "vira-lata" },
@@ -117,27 +118,21 @@ export default function NewPetForm() {
     try {
       const fileUrl = await uploadFile(blob as File);
 
-      const body = {
+      const result = await createAnimal({
         name,
         details,
         breed,
         gender,
         weightKg,
-        age: age.toISOString(),
-        lastBath: lastBath?.toISOString(),
+        age: new Date(age),
+        lastBath: new Date(lastBath || new Date()),
         imageUrl: fileUrl,
-      };
-
-      const petResponse = await fetch("/api/pets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
       });
 
-      if (!petResponse.ok) {
-        throw new Error("Falha ao criar o pet.");
+      if (result.error) {
+        throw new Error(result.error);
       }
-      if (petResponse.ok) {
+      if (result.data) {
         window.location.href = "/";
       }
     } catch (error) {
