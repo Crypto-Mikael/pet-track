@@ -1,8 +1,7 @@
 'use client'
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { startOfDay, endOfDay, parse } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { parse } from "date-fns";
 import { Plus, Trash2, ArrowLeft, Bone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +15,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { Animal, Food } from "@/lib/schema";
+import { getFoods, getFoodById, createFood, updateFood, deleteFood } from "@/app/actions/food";
+import { getAnimal } from "@/app/actions/pet";
 
 function calculateDailyCalories(foods: Food[] | null): number {
   if (!foods || foods.length === 0) return 0;
@@ -25,26 +26,6 @@ function calculateDailyCalories(foods: Food[] | null): number {
 function calculateCaloriePercentage(foods: Food[] | null, goal: string): number {
   const dailyCalories = calculateDailyCalories(foods);
   return Math.round((dailyCalories / Number(goal)) * 100);
-}
-
-async function fetchFoods(petId: string, selectedDate: Date): Promise<Food[]> {
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
-  const localDate = toZonedTime(selectedDate, timeZone);
-  
-  const dayStart = startOfDay(localDate);
-  const dayEnd = endOfDay(localDate);
-  
-  const startDateUTC = dayStart.toISOString();
-  const endDateUTC = new Date(dayEnd.getTime()).toISOString();
-  
-  const res = await fetch(`/api/foods?petId=${petId}&startDate=${startDateUTC}&endDate=${endDateUTC}`);
-  return await res.json() as Food[];
-}
-
-async function fetchAnimal(petId: string): Promise<Animal> {
-  const res = await fetch(`/api/pets?id=${petId}`);
-  return await res.json() as Animal;
 }
 
 export default function DietPage() {
@@ -57,59 +38,55 @@ export default function DietPage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString());
   const { register, handleSubmit, reset } = useForm<Partial<Food>>();
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setFoods(null);
-        const dateObj = new Date(selectedDate);
-        const [foodsData, animalData] = await Promise.all([
-          fetchFoods(params.petId, dateObj),
-          fetchAnimal(params.petId),
-        ]);
-        setFoods(foodsData);
-        setAnimal(animalData);
-      } catch (err) {
-        console.error("Erro ao carregar dados:", err);
-      }
-    }
-    loadData();
-  }, [params.petId, selectedDate]);
+   useEffect(() => {
+     async function loadData() {
+       try {
+         setFoods(null);
+         const dateObj = new Date(selectedDate);
+         const [foodsResult, animalResult] = await Promise.all([
+           getFoods(params.petId, dateObj),
+           getAnimal(params.petId),
+         ]);
+         if (foodsResult.data) setFoods(foodsResult.data);
+         if (animalResult.data) setAnimal(animalResult.data);
+       } catch (err) {
+         console.error("Erro ao carregar dados:", err);
+       }
+     }
+     loadData();
+   }, [params.petId, selectedDate]);
 
-  const onSubmit = async (data: Partial<Food>) => {
-    try {
-      if (editingFood) {
-        const res = await fetch(`/api/foods?id=${editingFood.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        const updated = await res.json() as Food;
-        setFoods(prev => prev ? prev.map(f => f.id === updated.id ? updated : f) : [updated]);
-        setEditingFood(null);
-      } else {
-        const res = await fetch("/api/foods", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        const newFood = await res.json() as Food;
-        setFoods(prev => prev ? [newFood, ...prev] : [newFood]);
-      }
-      reset();
-      setOpen(false);
-    } catch (err) {
-      console.error("Erro ao salvar refeição:", err);
+   const onSubmit = async (data: Partial<Food>) => {
+     try {
+       if (editingFood) {
+         const result = await updateFood(String(editingFood.id), data);
+         if (result.data) {
+           setFoods(prev => prev ? prev.map(f => f.id === result.data.id ? result.data : f) : [result.data]);
+           setEditingFood(null);
+         }
+       } else {
+         const result = await createFood(data);
+         if (result.data) {
+           setFoods(prev => prev ? [result.data, ...prev] : [result.data]);
+         }
+       }
+       reset();
+       setOpen(false);
+     } catch (err) {
+       console.error("Erro ao salvar refeição:", err);
     }
   };
 
-  const removeFood = async (id: number) => {
-    try {
-      await fetch(`/api/foods?id=${id}`, { method: "DELETE" });
-      setFoods(prev => prev ? prev.filter(f => f.id !== id) : []);
-    } catch (err) {
-      console.error("Erro ao deletar refeição:", err);
-    }
-  };
+   const removeFood = async (id: number) => {
+     try {
+       const result = await deleteFood(String(id));
+       if (result.success) {
+         setFoods(prev => prev ? prev.filter(f => f.id !== id) : []);
+       }
+     } catch (err) {
+       console.error("Erro ao deletar refeição:", err);
+     }
+   };
 
   return (
     <>

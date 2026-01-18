@@ -11,6 +11,7 @@ import { useParams, useRouter } from "next/navigation";
 import { DatePickerField } from "@/components/ui/datePickerField";
 import { CircularProgress } from "@/components/ui/circularProgress";
 import type { Vaccination } from "@/lib/schema";
+import { getVaccines, createVaccine, updateVaccine, deleteVaccine } from "@/app/actions/vaccine";
 
 function statusOf(v: Vaccination) {
   const dias = differenceInDays(v.expirationDate, new Date());
@@ -26,14 +27,6 @@ function calculateValidVaccinePercentage(vaccines: Vaccination[] | 0 | null) {
   return Math.round((validVaccines.length / vaccines.length) * 100);
 }
 
-async function fetchVaccines(petId: string): Promise<Vaccination[]> {
-  const fetchData = await fetch(`/api/vaccines?petId=${petId}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  return await fetchData.json() as Vaccination[];
-}
-
 export default function VacinasPage() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
@@ -42,59 +35,61 @@ export default function VacinasPage() {
   const [renewModal, setRenewModal] = useState<Vaccination | null>(null);
   const { register, handleSubmit, control, reset } = useForm<Partial<Vaccination>>();
 
-  useEffect(() => {
-    async function getData() {
-      setVacinas(null); // começa o loading
-      const vaccines = await fetchVaccines(params.petId);
-      setVacinas(vaccines ?? []);
-    }
-    getData();
-  }, [params.petId]);
+   useEffect(() => {
+     async function getData() {
+       setVacinas(null); // começa o loading
+       const result = await getVaccines(params.petId);
+       setVacinas(result.data ?? []);
+     }
+     getData();
+   }, [params.petId]);
 
-  const onSubmit = async (data: Partial<Vaccination>) => {
-    try {
-      const response = await fetch("/api/vaccines", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, petId: Number(params.petId) }),
-      });
-      const vaccine = await response.json() as Vaccination;
-      setVacinas((s) => s ? [vaccine, ...s] : [vaccine]);
-      reset();
-      setOpen(false);
-    } catch (err) {
-      console.error("Erro ao criar a vacina:", err);
-    }
-  }
+   const onSubmit = async (data: Partial<Vaccination>) => {
+     try {
+       const result = await createVaccine({
+         petId: Number(params.petId),
+         vaccineName: data.vaccineName || "",
+         applicationDate: data.applicationDate || new Date(),
+         expirationDate: data.expirationDate || new Date(),
+       });
+       if (result.data) {
+         setVacinas((s) => s ? [result.data, ...s] : [result.data]);
+       }
+       reset();
+       setOpen(false);
+     } catch (err) {
+       console.error("Erro ao criar a vacina:", err);
+     }
+   }
 
-  const onRenew = async (data: Partial<Vaccination>) => {
-    if (!renewModal) return;
-    try {
-      const response = await fetch(`/api/vaccines?id=${renewModal.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const updated = await response.json() as Vaccination;
-      setVacinas((s) => s ? s.map(v => v.id === updated.id ? updated : v) : [updated]);
-      reset();
-      setRenewModal(null);
-    } catch (err) {
-      console.error("Erro ao renovar a vacina:", err);
-    }
-  }
+   const onRenew = async (data: Partial<Vaccination>) => {
+     if (!renewModal) return;
+     try {
+       const result = await updateVaccine(renewModal.id, {
+         vaccineName: data.vaccineName,
+         applicationDate: data.applicationDate,
+         expirationDate: data.expirationDate,
+       });
+       if (result.data) {
+         setVacinas((s) => s ? s.map(v => v.id === result.data.id ? result.data : v) : [result.data]);
+       }
+       reset();
+       setRenewModal(null);
+     } catch (err) {
+       console.error("Erro ao renovar a vacina:", err);
+     }
+   }
 
-  async function remove(id: string) {
-    try {
-      await fetch(`/api/vaccines?id=${id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-      setVacinas((s) => s ? s.filter((v) => v.id !== Number(id)) : []);
-    } catch (err) {
-      console.error("Erro ao deletar a vacina:", err);
-    }
-  }
+   async function remove(id: string) {
+     try {
+       const result = await deleteVaccine(Number(id));
+       if (result.success) {
+         setVacinas((s) => s ? s.filter((v) => v.id !== Number(id)) : []);
+       }
+     } catch (err) {
+       console.error("Erro ao deletar a vacina:", err);
+     }
+   }
 
   return (
     <>

@@ -6,6 +6,7 @@ import CardCount, { type DashboardMetrics } from "@/components/ui/cardCount";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Animal } from "@/lib/schema";
 import CardNew from "@/components/ui/cardNew";
+import { getAnimals, getMetrics } from "@/app/actions/pet";
 
 export default function Home() {
     const [animals, setAnimals] = useState<Animal[] | undefined | null >(null);
@@ -16,22 +17,22 @@ export default function Home() {
 
       async function fetchData() {
         try {
-           const animalResponse = await fetch("/api/pets");
+          const animalsResult = await getAnimals();
           
-          const animalData = await animalResponse.json() as Animal[];
-          if (animalData.length === 0) {
+          if (!animalsResult.data || animalsResult.data.length === 0) {
             setAnimals(undefined);
+            return;
           }
-          const metrics = await fetch(`/api/home?petId=${animalData[tabNumber].id}`);
-          setMetrics(await metrics.json() as DashboardMetrics);
-          setAnimals(animalData);
+          
+          setAnimals(animalsResult.data);
+          // TODO: Implement full metrics calculation in server action
         } catch (error) {
           console.error("Erro ao buscar dados:", error);
         }
       }
       fetchData();
 
-  }, [tabNumber]);
+  }, []);
 
   if (animals === undefined) {
     return (

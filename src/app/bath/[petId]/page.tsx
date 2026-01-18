@@ -24,18 +24,8 @@ import { DatePickerField } from "@/components/ui/datePickerField";
 import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
 import type { Animal, Bath } from "@/lib/schema";
-
-async function fetchBaths(petId: number): Promise<Bath[]> {
-  const res = await fetch(`/api/baths?id=${petId}`);
-  if (!res.ok) throw new Error("Erro ao buscar banhos");
-  return res.json();
-}
-
-async function fetchAnimal(petId: number): Promise<Animal> {
-  const res = await fetch(`/api/pets?id=${petId}`);
-  if (!res.ok) throw new Error("Erro ao buscar animal");
-  return res.json();
-}
+import { getBaths, createBath, deleteBath } from "@/app/actions/bath";
+import { getAnimal } from "@/app/actions/pet";
 
 export default function Page() {
   const params = useParams<{ petId: string }>();
@@ -51,23 +41,27 @@ export default function Page() {
   const [daysWithoutBath, setDaysWithoutBath] = useState<number | null>(null);
 
    // --- Effects ---
-   useEffect(() => {
-     const loadData = async () => {
-       try {
-         const petId = Number(params.petId);
-         const [bathsData, animalData] = await Promise.all([
-           fetchBaths(petId),
-           fetchAnimal(petId),
-         ]);
-         setBaths(bathsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-         setBathWeeks([animalData.bathsCycleDays / 7]);
-       } catch (err) {
-         console.error("Erro ao carregar dados:", err);
-       }
-     };
+    useEffect(() => {
+      const loadData = async () => {
+        try {
+          const petId = Number(params.petId);
+          const [bathsResult, animalResult] = await Promise.all([
+            getBaths(petId),
+            getAnimal(String(petId)),
+          ]);
+          if (bathsResult.data) {
+            setBaths(bathsResult.data.sort((a: Bath, b: Bath) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          }
+          if (animalResult.data) {
+            setBathWeeks([animalResult.data.bathsCycleDays / 7]);
+          }
+        } catch (err) {
+          console.error("Erro ao carregar dados:", err);
+        }
+      };
 
-     loadData();
-   }, [params.petId]);
+      loadData();
+    }, [params.petId]);
 
   useEffect(() => {
     if (!baths || baths.length === 0) {
@@ -90,22 +84,20 @@ export default function Page() {
   }, [baths, bathWeeks]);
 
   // --- Actions ---
-  const onSubmit = async (data: FieldValues) => {
-    try {
-      const res = await fetch("/api/baths", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: data.date, petId: Number(params.petId) }),
-      });
+   const onSubmit = async (data: FieldValues) => {
+     try {
+       const result = await createBath({
+         date: data.date,
+         petId: Number(params.petId),
+       });
 
-      if (!res.ok) throw new Error("Falha ao criar banho");
-
-      const newBath = (await res.json()) as Bath;
-      setBaths((prev) => (prev ? [...prev, newBath] : [newBath]));
-    } catch (err) {
-      console.error("Erro ao criar banho:", err);
-    }
-  };
+       if (result.data) {
+         setBaths((prev) => (prev ? [...prev, result.data] : [result.data]));
+       }
+     } catch (err) {
+       console.error("Erro ao criar banho:", err);
+     }
+   };
 
   const onCycleChange = async () => {
     await fetch(`/api/pets?id=${params.petId}&bathsCycleDays=${bathWeeks[0] * 7}`, {
@@ -114,14 +106,16 @@ export default function Page() {
     });
   };
 
-  const removeBath = async (bathId: number) => {
-    try {
-      await fetch(`/api/baths?id=${bathId}`, { method: "DELETE" });
-      setBaths((prev) => prev?.filter((b) => b.id !== bathId) ?? []);
-    } catch {
-      alert("Erro ao deletar banho");
-    }
-  };
+   const removeBath = async (bathId: number) => {
+     try {
+       const result = await deleteBath(bathId);
+       if (result.success) {
+         setBaths((prev) => prev?.filter((b) => b.id !== bathId) ?? []);
+       }
+     } catch {
+       alert("Erro ao deletar banho");
+     }
+   };
 
   if (!baths) {
     return (
