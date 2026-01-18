@@ -1,7 +1,7 @@
 
 import Image from "next/image";
 
-import { Bone, ShowerHead, Syringe } from "lucide-react";
+import { Bone, ShowerHead, Syringe, Weight } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { CircularProgress } from "./circularProgress";
 import { ptBR } from "date-fns/locale";
@@ -65,6 +65,7 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
           <p className="text-foreground text-center text-3xl font-semibold capitalize">
             { formatDistance(new Date(), animal.age, { locale: ptBR }).split(" ")[3] }
           </p>
+          <div className="flex items-center gap-1 text-foreground text-center text-xl font-semibold capitalize"><Weight /> {animal.weightKg}kg</div>
         </div>
         <div className="flex flex-col h-full gap-16 items-center pt-8">
           <div className="flex gap-8">
