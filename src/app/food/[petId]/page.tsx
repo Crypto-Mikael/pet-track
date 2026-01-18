@@ -218,7 +218,7 @@ export default function DietPage() {
                 <Button
                   variant="destructive"
                   className="p-1 w-9"
-                  onClick={() => removeFood(food.id)}
+                  onClick={() => food.id && removeFood(food.id)}
                 >
                   <Trash2 size={16} />
                 </Button>
