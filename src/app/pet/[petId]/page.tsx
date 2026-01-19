@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Animal } from "@/lib/schema";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getAnimal } from "@/app/actions/pet";
+import { getAnimal, getMetrics } from "@/app/actions/pet";
 
 export default function Home() {
     const params = useParams<{ petId: string }>();
@@ -22,11 +22,10 @@ export default function Home() {
           const animalResult = await getAnimal(params.petId);
           if (animalResult.data) {
             setAnimal(animalResult.data);
-            // TODO: Implement metrics calculation
-            // const metricsResult = await getMetrics(String(animalResult.data.id));
-            // if (metricsResult.data) {
-            //   setMetrics(metricsResult.data as DashboardMetrics);
-            // }
+            const metricsResult = await getMetrics(Number(params.petId));
+            if (metricsResult.data) {
+              setMetrics(metricsResult.data as DashboardMetrics);
+            }
           }
         } catch (error) {
           console.error("Erro ao buscar dados:", error);

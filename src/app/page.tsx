@@ -16,10 +16,10 @@ export default function Home() {
     useEffect(() => {
 
       async function fetchData() {
+        setAnimals(null)
         try {
           const animalsResult = await getAnimals();
-
-
+          
           if (!animalsResult.data || animalsResult.data.length === 0) {
             setAnimals(undefined);
             return;
@@ -40,7 +40,7 @@ export default function Home() {
       }
       fetchData();
 
-  }, []);
+  }, [tabNumber]);
 
   if (animals === undefined) {
     return (
