@@ -11,21 +11,29 @@ import { getAnimals, getMetrics } from "@/app/actions/pet";
 export default function Home() {
     const [animals, setAnimals] = useState<Animal[] | undefined | null >(null);
     const [tabNumber, setTabNumber] = useState(0);
-    const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+    const [metrics, setMetrics] = useState<DashboardMetrics | undefined | null>(null);
 
     useEffect(() => {
 
       async function fetchData() {
         try {
           const animalsResult = await getAnimals();
-          
+
+
           if (!animalsResult.data || animalsResult.data.length === 0) {
             setAnimals(undefined);
             return;
           }
           
           setAnimals(animalsResult.data);
-          // TODO: Implement full metrics calculation in server action
+          const getMetricsResult = await getMetrics(animalsResult.data[tabNumber].id);
+          if (!animalsResult.data || getMetricsResult.data === null) {
+            setMetrics(undefined);
+            return;
+          }
+          
+          setMetrics(getMetricsResult.data);
+
         } catch (error) {
           console.error("Erro ao buscar dados:", error);
         }

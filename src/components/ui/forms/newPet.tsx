@@ -1,362 +1,361 @@
 "use client";
 
-import * as React from "react";
-import * as z from "zod";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, ArrowLeft, Bone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { Skeleton } from "@/components/ui/skeleton";
+import SliderTooltip from "@/components/ui/slider";
+import { updateDailyCalorieGoal, getAnimal } from "@/app/actions/pet";
+import { TZDate } from "@date-fns/tz";
+import { useParams, useRouter } from "next/navigation";
+import { CircularProgress } from "@/components/ui/circularProgress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import type { Animal, Food } from "@/lib/schema";
+import {
+  getFoods,
+  createFood,
+  updateFood,
+  deleteFood,
+} from "@/app/actions/food";
+import { Input } from "../input";
 
-import { CalendarIcon, Mars, Venus } from "lucide-react";
-import { ImageCropper } from "../input/imageCropper";
-import { useUploadThing } from "@/app/api/uploadthing/utils";
-import { createAnimal } from "@/app/actions/pet";
+/* -------------------------------------------------------------------------- */
+/*                                   ZOD                                      */
+/* -------------------------------------------------------------------------- */
 
-export const dogBreeds = [
-  { label: "Vira-lata (SRD)", value: "vira-lata" },
-  { label: "Labrador Retriever", value: "labrador" },
-  { label: "Golden Retriever", value: "golden" },
-  { label: "Pastor Alemão", value: "pastor-alemao" },
-  { label: "Bulldog Inglês", value: "bulldog-ingles" },
-  { label: "Bulldog Francês", value: "bulldog-frances" },
-  { label: "Poodle", value: "poodle" },
-  { label: "Shih Tzu", value: "shih-tzu" },
-  { label: "Yorkshire Terrier", value: "yorkshire" },
-  { label: "Beagle", value: "beagle" },
-  { label: "Rottweiler", value: "rottweiler" },
-  { label: "Pit Bull", value: "pitbull" },
-  { label: "Dachshund (Salsicha)", value: "dachshund" },
-  { label: "Boxer", value: "boxer" },
-  { label: "Chihuahua", value: "chihuahua" },
-  { label: "Maltês", value: "maltes" },
-  { label: "Cocker Spaniel", value: "cocker-spaniel" },
-  { label: "Husky Siberiano", value: "husky" },
-  { label: "Border Collie", value: "border-collie" },
-  { label: "Pug", value: "pug" },
-];
-
-export const catBreeds = [
-  { label: "Sem Raça Definida (SRD)", value: "srd" },
-  { label: "Persa", value: "persa" },
-  { label: "Siamês", value: "siames" },
-  { label: "Maine Coon", value: "maine-coon" },
-  { label: "Sphynx (Gato sem pelo)", value: "sphynx" },
-  { label: "Angorá", value: "angora" },
-  { label: "Ragdoll", value: "ragdoll" },
-  { label: "British Shorthair", value: "british-shorthair" },
-  { label: "American Shorthair", value: "american-shorthair" },
-  { label: "Bengal", value: "bengal" },
-  { label: "Norueguês da Floresta", value: "noruegues" },
-  { label: "Abissínio", value: "abissinio" },
-  { label: "Exótico de Pelo Curto", value: "exotico" },
-  { label: "Himalaio", value: "himalaio" },
-  { label: "Oriental", value: "oriental" },
-  { label: "Birmanês", value: "birmanes" },
-  { label: "Savannah", value: "savannah" },
-];
-
-// 🎯 Schema de validação com Zod (updated)
-const formSchema = z.object({
+const foodFormSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
-  details: z.string().optional(),
-  breed: z.string({ error: "Por favor, selecione uma raça." }),
-  age: z.date({ error: "Por favor, selecione a data de nascimento." }),
-  lastBath: z.date().optional(),
-  blob: z.unknown().optional(),
-  weightKg: z.string().optional(),
-  gender: z.enum(["male", "female"]),
-  animalType: z.enum(["dog", "cat", "other"]),
+  amount: z.number().nonnegative("Quantidade inválida.").optional(),
+  kcal: z.number().positive("As calorias devem ser maiores que zero."),
+  protein: z.number().nonnegative("Proteína inválida.").optional(),
+  fat: z.number().nonnegative("Gordura inválida.").optional(),
+  carbs: z.number().nonnegative("Carboidrato inválido.").optional(),
+  notes: z.string().max(300, "Máximo de 300 caracteres.").optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FoodFormValues = z.infer<typeof foodFormSchema>;
 
-export default function NewPetForm() {
-  const { startUpload } = useUploadThing("imageUploader");
+/* -------------------------------------------------------------------------- */
+
+export default function DietPage() {
+  const params = useParams<{ petId: string }>();
+  const router = useRouter();
+
+  const [foods, setFoods] = useState<Food[]>([]);
+  const [animal, setAnimal] = useState<Animal | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [editingFood, setEditingFood] = useState<Food | null>(null);
+
+  const [selectedDate, setSelectedDate] = useState(
+    new TZDate().toISOString().slice(0, 10)
+  );
+
+  const [calorieGoal, setCalorieGoal] = useState(0);
+
+  /* ------------------------------ react-hook-form ----------------------------- */
+
   const {
-    control,
+    register,
     handleSubmit,
-    setValue,
+    reset,
     formState: { errors },
-    watch,
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  } = useForm<FoodFormValues>({
+    resolver: zodResolver(foodFormSchema),
     defaultValues: {
-      name: "",
-      details: "",
-      breed: "vira-lata",
-      blob: null,
-      gender: "male",
-      weightKg: "",
-      animalType: "dog",
+      amount: 0,
+      kcal: 0,
+      protein: 0,
+      fat: 0,
+      carbs: 0,
     },
   });
 
-  const uploadFile = async (file: File) => {
-    const uploaded = await startUpload([file]);
-    try {
-      if (!uploaded || uploaded.length === 0) {
-        throw new Error("Nenhum arquivo foi enviado.");
+  /* --------------------------------- effects -------------------------------- */
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadData() {
+      try {
+        setLoading(true);
+        const date = new Date(`${selectedDate}T00:00:00`);
+
+        const [foodsResult, animalResult] = await Promise.all([
+          getFoods(params.petId, date),
+          getAnimal(params.petId),
+        ]);
+
+        if (!active) return;
+
+        setFoods(foodsResult.data ?? []);
+        setAnimal(animalResult.data ?? null);
+
+        if (animalResult.data) {
+          setCalorieGoal(Number(animalResult.data.dailyCalorieGoal) || 0);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (active) setLoading(false);
       }
-      
-      return uploaded[0].ufsUrl;
-    } catch (error) {
-      console.error("Erro ao fazer upload do arquivo:", error);
-      throw error;
+    }
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [params.petId, selectedDate]);
+
+  /* --------------------------------- cálculos -------------------------------- */
+
+  const dailyCalories = useMemo(
+    () => foods.reduce((sum, f) => sum + Number(f.kcal || 0), 0),
+    [foods]
+  );
+
+  const caloriePercentage = useMemo(() => {
+    if (!calorieGoal) return 0;
+    return Math.round((dailyCalories / calorieGoal) * 100);
+  }, [dailyCalories, calorieGoal]);
+
+  /* --------------------------------- submit ---------------------------------- */
+
+  const onSubmit = async (data: FoodFormValues) => {
+    const payload = {
+      ...data,
+      createdAt: new Date(`${selectedDate}T00:00:00`),
+      petId: Number(params.petId),
+    };
+
+    try {
+      if (editingFood) {
+        const res = await updateFood(String(editingFood.id), payload);
+        if (res.data) {
+          setFoods((prev) =>
+            prev.map((f) => (f.id === res.data!.id ? res.data! : f))
+          );
+        }
+      } else {
+        const res = await createFood(payload);
+        if (res.data) {
+          setFoods((prev) => [res.data!, ...prev]);
+        }
+      }
+
+      reset();
+      setEditingFood(null);
+      setOpen(false);
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, weightKg }: FormValues) => {
-    try {
-      const fileUrl = await uploadFile(blob as File);
-
-      const result = await createAnimal({
-        name,
-        details,
-        breed,
-        gender,
-        weightKg,
-        age: new Date(age),
-        lastBath: new Date(lastBath || new Date()),
-        imageUrl: fileUrl,
-      });
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      if (result.data) {
-        window.location.href = "/";
-      }
-    } catch (error) {
-      console.error("Erro ao criar o pet:", error);
-    }
+  const removeFood = async (id: number) => {
+    await deleteFood(String(id));
+    setFoods((prev) => prev.filter((f) => f.id !== id));
   };
+
+  /* --------------------------------- render ---------------------------------- */
 
   return (
     <>
-      <ImageCropper
-        className="flex flex-col"
-        label="Selecione uma imagem do pet"
-        aspect={1}
-        onChange={(url) => {
-          setValue("blob", url);
-        }}
-      />
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 max-w-md w-full mx-auto">
+      {/* HEADER */}
+      <header className="relative py-2 border-b-2 text-center text-3xl">
+        <Button
+          className="absolute left-2"
+          variant="ghost"
+          size="icon"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft />
+        </Button>
+        Alimentação
+      </header>
 
-        {/* Nome */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="name">Nome</Label>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => <Input id="name" {...field} placeholder="Nome do pet" />}
-          />
-          {errors.name && <span className="text-destructive text-sm">{errors.name.message}</span>}
-        </div>
+      {/* DATA */}
+      <section className="p-4 border-b-2 flex justify-center">
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          className="border rounded px-3 py-2"
+        />
+      </section>
 
-        {/* Detalhes */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="details">Detalhes</Label>
-           <Controller
-            name="details"
-            control={control}
-            render={({ field }) => (
-                <Textarea id="details" {...field} placeholder="Informações adicionais sobre o pet" />
-            )}
-          />
-          {errors.details && <span className="text-destructive text-sm">{errors.details.message}</span>}
-        </div>
-
-        {/* Data de Nascimento */}
-        <div className="flex flex-col gap-2">
-            <Label htmlFor="age">Data de Nascimento</Label>
-            <Controller
-                name="age"
-                control={control}
-                render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                    format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                    <span>Selecione uma data</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1990-01-01")
-                                }
-                                captionLayout="dropdown"
-                            />
-                        </PopoverContent>
-                    </Popover>
-                )}
+      {/* RESUMO */}
+      <section className="p-4 bg-muted/30 border-b-2">
+        {loading || !animal ? (
+          <Skeleton className="h-48 rounded-full" />
+        ) : (
+          <>
+            <CircularProgress
+              value={caloriePercentage}
+              size={188}
+              icon={Bone}
+              textValue="Calorias"
             />
-            {errors.age && <span className="text-destructive text-sm">{errors.age.message}</span>}
-        </div>
-
-
-        {/* Sexo */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="gender">Sexo</Label>
-          <Controller
-              name="gender"
-              control={control}
-              render={({ field }) => (
-                <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                    className="flex gap-6"
-                >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="male" />
-                      <Label htmlFor="male" className="flex flex-row items-center gap-1 cursor-pointer">
-                        <Mars className="w-4 h-4" /> Macho
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="female" id="female" />
-                      <Label htmlFor="female" className="flex flex-row items-center gap-1 cursor-pointer">
-                        <Venus className="w-4 h-4" /> Fêmea
-                      </Label>
-                    </div>
-                </RadioGroup>
-              )}
-          />
-          {errors.gender && <span className="text-destructive text-sm">{errors.gender.message}</span>}
-        </div>
-
-        {/* Tipo de Animal */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="animalType">Tipo de Animal</Label>
-          <Controller
-            name="animalType"
-            control={control}
-            defaultValue="dog"
-            render={({ field }) => (
-              <RadioGroup
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  setValue("breed", value === "other" ? "undefined" : value === "dog" ? dogBreeds[0].value : catBreeds[0].value);
-                }}
-                value={field.value}
-                className="flex gap-6"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="dog" id="dog" />
-                  <Label htmlFor="dog" className="cursor-pointer">Cachorro</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cat" id="cat" />
-                  <Label htmlFor="cat" className="cursor-pointer">Gato</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other" className="cursor-pointer">Outro</Label>
-                </div>
-              </RadioGroup>
-            )}
-          />
-
-          {/* Peso */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="weightKg">Peso (kg)</Label>
-            <Controller
-              name="weightKg"
-              control={control}
-              render={({ field }) => <Input type="number" id="weightKg" {...field} placeholder="Peso em kg" />}
+            <div className="text-center mt-2">
+              {dailyCalories} / {calorieGoal} kcal
+            </div>
+            <SliderSection
+              petId={Number(params.petId)}
+              initialValue={calorieGoal}
+              onChange={setCalorieGoal}
             />
-            {errors.weightKg && <span className="text-destructive text-sm">{errors.weightKg.message}</span>}
-          </div>
-
-          {/* Raça */}
-          {watch("animalType") !== "other" && (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="breed">Raça</Label>
-            <Controller
-              name="breed"
-              control={control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione uma raça" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(watch("animalType") === "dog" ? dogBreeds : catBreeds).map((breed) => (
-                      <SelectItem key={breed.value} value={breed.value}>
-                        {breed.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.breed && <span className="text-destructive text-sm">{errors.breed.message}</span>}
-          </div>
+          </>
         )}
-        </div>
+      </section>
 
-        {/* Último Banho */}
-        <div className="flex flex-col gap-2">
-            <Label htmlFor="lastBath">Último Banho</Label>
-            <Controller
-                name="lastBath"
-                control={control}
-                render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                    format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                    <span>Selecione uma data</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1990-01-01")
-                                }
-                                captionLayout="dropdown"
-                            />
-                        </PopoverContent>
-                    </Popover>
-                )}
+      {/* LISTA */}
+      <section className="p-4 flex flex-col gap-4">
+        {foods.map((food) => (
+          <article key={food.id} className="border rounded p-4">
+            <strong>{food.name}</strong>
+            <p>{food.kcal} kcal</p>
+            <div className="flex gap-2 mt-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingFood(food);
+                  reset(food);
+                  setOpen(true);
+                }}
+              >
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => removeFood(food.id!)}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {/* FAB */}
+      <Button
+        className="fixed bottom-20 right-6 h-14 w-14 rounded-full"
+        onClick={() => {
+          reset();
+          setEditingFood(null);
+          setOpen(true);
+        }}
+      >
+        <Plus />
+      </Button>
+
+      {/* MODAL */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingFood ? "Editar refeição" : "Adicionar refeição"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
+            {/* NOME */}
+            <input {...register("name")} placeholder="Nome" />
+            {errors.name && (
+              <span className="text-xs text-destructive">
+                {errors.name.message}
+              </span>
+            )}
+
+            {/* KCAL */}
+            <input
+              type="number"
+              {...register("kcal", {
+                setValueAs: (v) => (v === "" ? undefined : Number(v)),
+              })}
+              placeholder="Calorias"
             />
-            {errors.lastBath && <span className="text-destructive text-sm">{errors.lastBath.message}</span>}
-        </div>
+            {errors.kcal && (
+              <span className="text-xs text-destructive">
+                {errors.kcal.message}
+              </span>
+            )}
 
-        {/* Botão */}
-        <Button type="submit" className="w-full">Salvar</Button>
-      </form>
+            {/* MACROS */}
+            {(["protein", "fat", "carbs"] as const).map((field) => (
+              <div key={field}>
+                <input
+                  type="number"
+                  {...register(field, {
+                    setValueAs: (v) => (v === "" ? undefined : Number(v)),
+                  })}
+                  placeholder={field}
+                />
+                {errors[field] && (
+                  <span className="text-xs text-destructive">
+                    {errors[field]?.message}
+                  </span>
+                )}
+              </div>
+            ))}
+
+            <textarea {...register("notes")} placeholder="Observações" />
+
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {editingFood ? "Atualizar" : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+/* -------------------------------- Slider -------------------------------- */
+
+function SliderSection({
+  petId,
+  initialValue,
+  onChange,
+}: {
+  petId: number;
+  initialValue: number;
+  onChange: (n: number) => void;
+}) {
+  const [value, setValue] = useState<number[]>([initialValue]);
+
+  useEffect(() => {
+    setValue([initialValue]);
+  }, [initialValue]);
+
+  return (
+    <SliderTooltip
+      min={100}
+      max={5000}
+      step={50}
+      labelTitle="Meta diária de calorias"
+      labelValue={value[0]}
+      value={value}
+      onValueChange={(v) => {
+        setValue(v);
+        onChange(v[0]);
+      }}
+      onValueCommit={(v) =>
+        updateDailyCalorieGoal(petId, v[0].toString())
+      }
+    />
   );
 }

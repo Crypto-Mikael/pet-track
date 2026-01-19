@@ -71,7 +71,7 @@ export default function Page() {
     }
 
     // Último banho registrado
-    const lastBath = baths[baths.length - 1];
+    const lastBath = baths[0];
     const lastBathDate = new Date(lastBath.date);
 
     const days = differenceInDays(new Date(), lastBathDate);
@@ -83,21 +83,23 @@ export default function Page() {
     setBathPercent({ initialValue: percent, value: 0 });
   }, [baths, bathWeeks]);
 
-  // --- Actions ---
-   const onSubmit = async (data: FieldValues) => {
-     try {
-       const result = await createBath({
-         date: data.date,
-         petId: Number(params.petId),
-       });
+  const onSubmit = async (data: FieldValues) => {
+      try {
+        const dateValue = typeof data.date === 'string' ? new Date(data.date) : (data.date as Date);
+        const result = await createBath({
+          date: dateValue,
+          petId: Number(params.petId),
+        });
+ 
+        if (result.data) {
+          // Prepend to keep newest bath at the top of the list
+          setBaths((prev) => (prev ? [result.data, ...prev] : [result.data]));
+        }
+      } catch (err) {
+        console.error("Erro ao criar banho:", err);
+      }
+    };
 
-       if (result.data) {
-         setBaths((prev) => (prev ? [...prev, result.data] : [result.data]));
-       }
-     } catch (err) {
-       console.error("Erro ao criar banho:", err);
-     }
-   };
 
    const onCycleChange = async () => {
      await updateBathsCycleDays(params.petId, bathWeeks[0] * 7);
@@ -226,12 +228,12 @@ export default function Page() {
           max={12}
           step={1}
           min={1}
-          labelFor="Tempo sem banho"
+          labelFor="TTempo sem banho em semanas"
           value={bathWeeks}
           labelValue={Math.floor(bathWeeks[0])}
           onValueChange={setBathWeeks}
           onValueCommit={onCycleChange}
-          labelTitle="Tempo sem banho"
+          labelTitle="Tempo sem banho em semanas"
         />
       </section>
       <section className="flex flex-col gap-2 p-4 border-t-2 border-border">

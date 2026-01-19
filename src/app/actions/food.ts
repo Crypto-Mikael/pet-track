@@ -1,9 +1,15 @@
 "use server";
 
 import db from "@/lib/db";
-import { foods, animal } from "@/lib/schema";
+import { foods, animal, Food } from "@/lib/schema";
 import { eq, gte, lte, and, desc } from "drizzle-orm";
-import { createFoodSchema, updateFoodSchema, getFoodsQuerySchema, type CreateFoodInput, type UpdateFoodInput } from "@/lib/validations/food";
+import {
+  createFoodSchema,
+  updateFoodSchema,
+  getFoodsQuerySchema,
+  type CreateFoodInput,
+  type UpdateFoodInput,
+} from "@/lib/validations/food";
 import { startOfDay, endOfDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
@@ -62,17 +68,15 @@ export async function getFoodById(id: string) {
   }
 }
 
-export async function createFood(data: unknown) {
+export async function createFood(data: Partial<Food>) {
   try {
-    const validation = createFoodSchema.safeParse(data);
+    const { petId, name, amount, kcal, protein, fat, carbs, notes, createdAt } =
+      data;
 
-    if (!validation.success) {
-      return { error: "Dados inválidos", details: validation.error.issues };
+    if (!petId || !name || !kcal || !createdAt) {
+      return { error: "Dados obrigatórios ausentes" };
     }
 
-    const { petId, name, amount, kcal, protein, fat, carbs, notes } = validation.data;
-
-    // Verificar se o pet existe
     const [pet] = await db
       .select()
       .from(animal)
@@ -82,19 +86,18 @@ export async function createFood(data: unknown) {
     if (!pet) {
       return { error: "Pet não encontrado" };
     }
-
     const food = {
       petId,
       name,
-      amount: amount !== null ? String(amount) : null,
-      kcal: String(kcal),
-      protein: protein !== null ? String(protein) : null,
-      fat: fat !== null ? String(fat) : null,
-      carbs: carbs !== null ? String(carbs) : null,
-      notes: notes ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      amount: amount || null,
+      kcal,
+      protein: protein || null,
+      fat: fat || null,
+      carbs: carbs || null,
+      notes: notes || null,
+      createdAt,
+      updatedAt: createdAt,
+    } as Food;
 
     const [created] = await db.insert(foods).values(food).returning();
 
@@ -126,7 +129,10 @@ export async function updateFood(id: string, data: unknown) {
 
     for (const [key, value] of Object.entries(validatedData)) {
       if (value !== undefined) {
-        if (["amount", "kcal", "protein", "fat", "carbs"].includes(key) && value !== null) {
+        if (
+          ["amount", "kcal", "protein", "fat", "carbs"].includes(key) &&
+          value !== null
+        ) {
           updateData[key] = String(value);
         } else {
           updateData[key] = value;

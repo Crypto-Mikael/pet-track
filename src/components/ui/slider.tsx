@@ -19,6 +19,14 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
         const [value, setValue] = React.useState<number[]>(
             props.defaultValue ? [...props.defaultValue] : [0]
         );
+        // Sync internal value with external controlled value when provided
+        const externalValue = (props as any).value as number[] | undefined;
+        React.useEffect(() => {
+            if (externalValue && Array.isArray(externalValue)) {
+                setValue([...externalValue]);
+            }
+        }, [externalValue]);
+
         const [showTooltipState, setShowTooltipState] = React.useState(false);
         const space = props.max && props.step ? (props?.max / props.step) : 0;
 
@@ -43,7 +51,7 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                 {
                     labelFor && labelTitle &&
                     <Label htmlFor={labelFor} className="justify-between pl-0.5 text-muted-foreground">
-                        <span className="text-xl text-foreground">{labelTitle}</span><span >{labelValue} {labelValue === 1 ? 'semana' : 'semanas'}</span></Label>
+                        <span className="text-xl text-foreground">{labelTitle}</span><span >{labelValue}</span></Label>
                 }
 
                 <SliderPrimitive.Root

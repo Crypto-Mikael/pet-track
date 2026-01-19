@@ -12,7 +12,7 @@ type DatePickerFieldProps = {
   control: Control;
   name: string;
   label: string;
-  defaultValue?: string;
+  defaultValue?: string | Date;
 };
 
 export function DatePickerField({ control, name, label, defaultValue }: DatePickerFieldProps) {
@@ -26,9 +26,14 @@ export function DatePickerField({ control, name, label, defaultValue }: DatePick
       <Controller
         control={control}
         name={name}
-        defaultValue={defaultValue || new Date().toISOString()}
+        defaultValue={defaultValue ?? new Date()}
         render={({ field: { value, onChange } }) => {
-          const selectedDate = value ? parseISO(value) : undefined;
+          let selectedDate: Date | undefined;
+          if (value instanceof Date) {
+            selectedDate = value;
+          } else if (typeof value === "string" && value) {
+            selectedDate = parseISO(value);
+          }
 
           return (
             <Popover open={open} onOpenChange={setOpen}>
@@ -57,7 +62,7 @@ export function DatePickerField({ control, name, label, defaultValue }: DatePick
                   selected={selectedDate}
                   onSelect={(d) => {
                     if (d) {
-                      onChange(d.toISOString());
+                      onChange(d);
                       setOpen(false);
                     }
                   }}
