@@ -14,7 +14,7 @@ export default function ListItem({ props }: { props: ListItemProps | null }) {
     return (
       <Skeleton className="flex gap-8 justify-center items-center w-full h-28 p-6 rounded-2xl" />
     );
-  }
+  } 
 
   return (
     <article className='flex relative bg-card border-2 border-border rounded-2xl h-28'>
