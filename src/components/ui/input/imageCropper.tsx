@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import type React from 'react';
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -120,12 +120,12 @@ export function ImageCropper({
           return;
         }
 
-        // Tenta criar File a partir do blob (se suportado)
+        // Tenta criar File a partir do blob (se suportado) com JPEG e compressão
         let file: File | null = null;
         try {
           if (typeof File !== 'undefined') {
-            file = new File([blob], 'cropped-image.png', {
-              type: blob.type,
+            file = new File([blob], 'cropped-image.jpg', {
+              type: 'image/jpeg',
               lastModified: Date.now(),
             });
           } else {
@@ -140,7 +140,7 @@ export function ImageCropper({
         onChange?.(file);
         setPreview(URL.createObjectURL(blob));
         resetState();
-      }, 'image/png');
+      }, 'image/jpeg', 0.7);
     } catch (error) {
       console.error('Erro ao aplicar crop:', error);
       resetState();

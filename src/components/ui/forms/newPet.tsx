@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as z from "zod";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +20,7 @@ import { CalendarIcon, Mars, Venus } from "lucide-react";
 import { ImageCropper } from "../input/imageCropper";
 import { useUploadThing } from "@/app/api/uploadthing/utils";
 import { createAnimal } from "@/app/actions/pet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export const dogBreeds = [
   { label: "Vira-lata (SRD)", value: "vira-lata" },
@@ -82,6 +83,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function NewPetForm() {
   const { startUpload } = useUploadThing("imageUploader");
   const [loading, setLoading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -109,10 +111,12 @@ export default function NewPetForm() {
     return uploaded[0].ufsUrl;
   };
 
-  const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, weightKg }: FormValues) => {
+  const onSubmit: SubmitHandler<FormValues> = async ({ name, details, breed, age, gender, blob, lastBath, weightKg }: FormValues) => {
     setLoading(true);
     try {
-      if (!blob) throw new Error("Nenhum arquivo selecionado.");
+      if (!blob) {
+        throw new Error("Nenhum arquivo selecionado.");
+      }
       const fileUrl = await uploadFile(blob);
 
       const result = await createAnimal({
@@ -133,7 +137,9 @@ export default function NewPetForm() {
         window.location.href = "/";
       }
     } catch (error) {
+      const msg = (error as any)?.message ?? "Erro ao fazer upload do arquivo";
       console.error("Erro ao criar o pet:", error);
+      setUploadError(msg);
     } finally {
       setLoading(false);
     }
@@ -145,9 +151,7 @@ export default function NewPetForm() {
         className="flex flex-col"
         label="Selecione uma imagem do pet"
         aspect={1}
-        onChange={(file) => {
-          setValue("blob", file ?? undefined);
-        }}
+        onChange={(file) => setValue("blob", file ?? undefined)}
       />
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 max-w-md w-full mx-auto">
         {/* Nome */}
@@ -226,13 +230,13 @@ export default function NewPetForm() {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="male" id="male" />
                   <Label htmlFor="male" className="flex flex-row items-center gap-1 cursor-pointer">
-                    <Mars className="w-4 h-4" /> Macho
+                    <CalendarIcon className="w-4 h-4" /> Macho
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="female" id="female" />
                   <Label htmlFor="female" className="flex flex-row items-center gap-1 cursor-pointer">
-                    <Venus className="w-4 h-4" /> Fêmea
+                    <CalendarIcon className="w-4 h-4" /> Fêmea
                   </Label>
                 </div>
               </RadioGroup>
@@ -326,11 +330,7 @@ export default function NewPetForm() {
                     className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {field.value ? (
-                      format(field.value, "PPP", { locale: ptBR })
-                    ) : (
-                      <span>Selecione uma data</span>
-                    )}
+                    {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Selecione uma data</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -353,6 +353,21 @@ export default function NewPetForm() {
           ADICIONAR
         </Button>
       </form>
+
+      {/* Error Modal para validar no celular */}
+      <Dialog open={Boolean(uploadError)} onOpenChange={(open) => {
+        if (!open) setUploadError(null);
+      }}>
+        <DialogContent className="max-w-md p-0">
+          <DialogHeader>
+            <DialogTitle>Erro no Upload</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 text-sm text-destructive">{uploadError}</div>
+          <DialogFooter>
+            <Button onClick={() => setUploadError(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
- }
+}
