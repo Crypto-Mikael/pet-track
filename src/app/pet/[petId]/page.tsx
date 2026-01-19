@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import CardCount, { DashboardMetrics } from "@/components/ui/cardCount";
+import CardCount, { type DashboardMetrics } from "@/components/ui/cardCount";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Animal } from "@/lib/schema";
+import type { Animal } from "@/lib/schema";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { getAnimal, getMetrics } from "@/app/actions/pet";
 
 export default function Home() {
     const params = useParams<{ petId: string }>();
@@ -18,11 +19,14 @@ export default function Home() {
 
       async function fetchData() {
         try {
-          const animalResponse = await fetch(`/api/pets?id=${params.petId}`);
-          const animalData = await animalResponse.json() as Animal;
-          const metrics = await fetch(`/api/home?petId=${animalData.id}`);
-          setMetrics(await metrics.json() as DashboardMetrics);
-          setAnimal(animalData);
+          const animalResult = await getAnimal(params.petId);
+          if (animalResult.data) {
+            setAnimal(animalResult.data);
+            const metricsResult = await getMetrics(Number(params.petId));
+            if (metricsResult.data) {
+              setMetrics(metricsResult.data as DashboardMetrics);
+            }
+          }
         } catch (error) {
           console.error("Erro ao buscar dados:", error);
         }

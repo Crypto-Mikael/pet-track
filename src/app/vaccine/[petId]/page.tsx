@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton"; // <--- seu componente Skel
 import { useParams, useRouter } from "next/navigation";
 import { DatePickerField } from "@/components/ui/datePickerField";
 import { CircularProgress } from "@/components/ui/circularProgress";
-import { Vaccination } from "@/lib/schema";
+import type { Vaccination } from "@/lib/schema";
+import { getVaccines, createVaccine, updateVaccine, deleteVaccine } from "@/app/actions/vaccine";
 
 function statusOf(v: Vaccination) {
   const dias = differenceInDays(v.expirationDate, new Date());
@@ -34,67 +35,61 @@ export default function VacinasPage() {
   const [renewModal, setRenewModal] = useState<Vaccination | null>(null);
   const { register, handleSubmit, control, reset } = useForm<Partial<Vaccination>>();
 
-  const fetchVaccines = async (petId: string) => {
-    const fetchData = await fetch(`/api/vaccines?petId=${petId}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    return await fetchData.json() as Vaccination[];
-  }
+   useEffect(() => {
+     async function getData() {
+       setVacinas(null); // começa o loading
+       const result = await getVaccines(params.petId);
+       setVacinas(result.data ?? []);
+     }
+     getData();
+   }, [params.petId]);
 
-  useEffect(() => {
-    async function getData() {
-      setVacinas(null); // começa o loading
-      const vaccines = await fetchVaccines(params.petId);
-      setVacinas(vaccines ?? []);
-    }
-    getData();
-  }, [params.petId]);
+   const onSubmit = async (data: Partial<Vaccination>) => {
+     try {
+       const result = await createVaccine({
+         petId: Number(params.petId),
+         vaccineName: data.vaccineName || "",
+         applicationDate: data.applicationDate || new Date(),
+         expirationDate: data.expirationDate || new Date(),
+       });
+       if (result.data) {
+         setVacinas((s) => s ? [result.data, ...s] : [result.data]);
+       }
+       reset();
+       setOpen(false);
+     } catch (err) {
+       console.error("Erro ao criar a vacina:", err);
+     }
+   }
 
-  const onSubmit = async (data: Partial<Vaccination>) => {
-    try {
-      const response = await fetch("/api/vaccines", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, petId: Number(params.petId) }),
-      });
-      const vaccine = await response.json() as Vaccination;
-      setVacinas((s) => s ? [vaccine, ...s] : [vaccine]);
-      reset();
-      setOpen(false);
-    } catch (err) {
-      console.error("Erro ao criar a vacina:", err);
-    }
-  }
+   const onRenew = async (data: Partial<Vaccination>) => {
+     if (!renewModal) return;
+     try {
+       const result = await updateVaccine(renewModal.id, {
+         vaccineName: data.vaccineName,
+         applicationDate: data.applicationDate,
+         expirationDate: data.expirationDate,
+       });
+       if (result.data) {
+         setVacinas((s) => s ? s.map(v => v.id === result.data.id ? result.data : v) : [result.data]);
+       }
+       reset();
+       setRenewModal(null);
+     } catch (err) {
+       console.error("Erro ao renovar a vacina:", err);
+     }
+   }
 
-  const onRenew = async (data: Partial<Vaccination>) => {
-    if (!renewModal) return;
-    try {
-      const response = await fetch(`/api/vaccines?id=${renewModal.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const updated = await response.json() as Vaccination;
-      setVacinas((s) => s ? s.map(v => v.id === updated.id ? updated : v) : [updated]);
-      reset();
-      setRenewModal(null);
-    } catch (err) {
-      console.error("Erro ao renovar a vacina:", err);
-    }
-  }
-
-  async function remove(id: string) {
-    try {
-      await fetch(`/api/vaccines?id=${id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-      setVacinas((s) => s ? s.filter((v) => v.id !== Number(id)) : []);
-    } catch (err) {
-      console.error("Erro ao deletar a vacina:", err);
-    }
-  }
+   async function remove(id: string) {
+     try {
+       const result = await deleteVaccine(Number(id));
+       if (result.success) {
+         setVacinas((s) => s ? s.filter((v) => v.id !== Number(id)) : []);
+       }
+     } catch (err) {
+       console.error("Erro ao deletar a vacina:", err);
+     }
+   }
 
   return (
     <>
@@ -120,9 +115,10 @@ export default function VacinasPage() {
       </section>
 
       <section className="flex flex-col gap-4 p-4 max-h-fit overflow-y-auto">
-        {vacinas === null ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-lg p-6 shadow-sm flex flex-col h-94 bg-card justify-between items-start gap-4 animate-pulse">
+         {vacinas === null ? (
+           Array.from({ length: 3 }).map((_, i) => (
+             // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton loader
+             <div key={`vaccine-skeleton-${i}`} className="rounded-lg p-6 shadow-sm flex flex-col h-94 bg-card justify-between items-start gap-4 animate-pulse">
               <div className="flex flex-col w-full">
                 <Skeleton className="h-12 w-26 mb-3" />
                 <Skeleton className="h-6 w-48" />
@@ -187,9 +183,9 @@ export default function VacinasPage() {
           <Dialog.Overlay className="fixed inset-0 bg-black/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card rounded-lg p-4 w-96 shadow-lg">
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-              <div>
-                <label className="block text-sm mb-1 font-semibold">Nome da Vacina</label>
-                <input {...register("vaccineName")} className="w-full border rounded p-2" placeholder="Nome da vacina" />
+               <div>
+                 <label htmlFor="vaccine-name" className="block text-sm mb-1 font-semibold">Nome da Vacina</label>
+                 <input id="vaccine-name" {...register("vaccineName")} className="w-full border rounded p-2" placeholder="Nome da vacina" />
               </div>
               <div className="flex flex-col items-center gap-4 w-full ">
                 <DatePickerField control={control} name="applicationDate" label="Data de Aplicação" />

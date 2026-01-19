@@ -1,4 +1,4 @@
-import * as React from "react"
+import type * as React from "react"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "./skeleton"
@@ -95,8 +95,8 @@ export function CircularProgress({
         className={cn("relative flex items-center justify-center", className)}
         style={{ width: numericSize, height: numericSize }}
         {...props}
-      >
-        <svg width={numericSize} height={numericSize} className="overflow-visible">
+       >
+         <svg width={numericSize} height={numericSize} className="overflow-visible" role="img" aria-label="Progress">
           <circle
             className="text-foreground/10 z-10"
             stroke="currentColor"

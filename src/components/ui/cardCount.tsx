@@ -2,12 +2,12 @@
 import Image from "next/image";
 
 import { Bone, ShowerHead, Syringe, Weight } from "lucide-react";
-import { formatDistance } from "date-fns";
+import { formatDistanceStrict } from "date-fns";
 import { CircularProgress } from "./circularProgress";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "./skeleton";
 import Link from "next/link";
-import { Animal } from "@/lib/schema";
+import type { Animal } from "@/lib/schema";
 
 export type DashboardMetrics = {
   bathPercentage: number;
@@ -60,10 +60,10 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
         />
         <div>
           <h1 className="text-6xl text-center text-foreground font-semibold">
-            { formatDistance(new Date(), animal.age, { locale: ptBR }).split(" ")[2] }
+            { formatDistanceStrict(new Date(), animal.age, { locale: ptBR }).split(" ")[0] }
           </h1>
           <p className="text-foreground text-center text-3xl font-semibold capitalize">
-            { formatDistance(new Date(), animal.age, { locale: ptBR }).split(" ")[3] }
+            { formatDistanceStrict(new Date(), animal.age, { locale: ptBR } ).split(" ")[1] }
           </p>
           <div className="flex items-center gap-1 text-foreground text-center text-xl font-semibold capitalize"><Weight /> {animal.weightKg}kg</div>
         </div>

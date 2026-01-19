@@ -19,6 +19,14 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
         const [value, setValue] = React.useState<number[]>(
             props.defaultValue ? [...props.defaultValue] : [0]
         );
+        // Sync internal value with external controlled value when provided
+        const externalValue = (props as any).value as number[] | undefined;
+        React.useEffect(() => {
+            if (externalValue && Array.isArray(externalValue)) {
+                setValue([...externalValue]);
+            }
+        }, [externalValue]);
+
         const [showTooltipState, setShowTooltipState] = React.useState(false);
         const space = props.max && props.step ? (props?.max / props.step) : 0;
 
@@ -43,7 +51,7 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                 {
                     labelFor && labelTitle &&
                     <Label htmlFor={labelFor} className="justify-between pl-0.5 text-muted-foreground">
-                        <span className="text-xl text-foreground">{labelTitle}</span><span >{labelValue} {labelValue === 1 ? 'semana' : 'semanas'}</span></Label>
+                        <span className="text-xl text-foreground">{labelTitle}</span><span >{labelValue}</span></Label>
                 }
 
                 <SliderPrimitive.Root
@@ -68,7 +76,8 @@ const SliderTooltip = React.forwardRef<React.ComponentRef<typeof SliderPrimitive
                     {hasMarks &&
                         <div className="absolute inset-0 flex grow w-full items-center justify-between px-[7px] cursor-pointer">
                             {Array.from({length: space + 1}).map((_, index) => (
-                                <div className="w-1 h-2 rounded-full bg-primary" key={index}></div>
+                                // biome-ignore lint/suspicious/noArrayIndexKey: static slider marks
+                                <div key={`mark-${index}`} className="w-1 h-2 rounded-full bg-primary" />
                             ))}
                         </div>
                     }

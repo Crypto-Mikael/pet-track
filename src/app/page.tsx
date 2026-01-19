@@ -2,29 +2,38 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
-import CardCount, { DashboardMetrics } from "@/components/ui/cardCount";
+import CardCount, { type DashboardMetrics } from "@/components/ui/cardCount";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Animal } from "@/lib/schema";
+import type { Animal } from "@/lib/schema";
 import CardNew from "@/components/ui/cardNew";
+import { getAnimals, getMetrics } from "@/app/actions/pet";
 
 export default function Home() {
     const [animals, setAnimals] = useState<Animal[] | undefined | null >(null);
     const [tabNumber, setTabNumber] = useState(0);
-    const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+    const [metrics, setMetrics] = useState<DashboardMetrics | undefined | null>(null);
 
     useEffect(() => {
 
       async function fetchData() {
+        setAnimals(null)
         try {
-          const animalResponse = await fetch(`/api/pets`);
+          const animalsResult = await getAnimals();
           
-          const animalData = await animalResponse.json() as Animal[];
-          if (animalData.length === 0) {
+          if (!animalsResult.data || animalsResult.data.length === 0) {
             setAnimals(undefined);
+            return;
           }
-          const metrics = await fetch(`/api/home?petId=${animalData[tabNumber].id}`);
-          setMetrics(await metrics.json() as DashboardMetrics);
-          setAnimals(animalData);
+          
+          setAnimals(animalsResult.data);
+          const getMetricsResult = await getMetrics(animalsResult.data[tabNumber].id);
+          if (!animalsResult.data || getMetricsResult.data === null) {
+            setMetrics(undefined);
+            return;
+          }
+          
+          setMetrics(getMetricsResult.data);
+
         } catch (error) {
           console.error("Erro ao buscar dados:", error);
         }

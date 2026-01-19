@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useForm, FieldValues } from "react-hook-form";
+import { useForm, type FieldValues } from "react-hook-form";
 import { differenceInDays, intlFormat } from "date-fns";
 import {
   ArrowLeft,
@@ -23,13 +23,15 @@ import {
 import { DatePickerField } from "@/components/ui/datePickerField";
 import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
-import { Animal, Bath } from "@/lib/schema";
+import type { Animal, Bath } from "@/lib/schema";
+import { getBaths, createBath, deleteBath } from "@/app/actions/bath";
+import { getAnimal, updateBathsCycleDays } from "@/app/actions/pet";
 
 export default function Page() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
 
-  const { control, handleSubmit } = useForm<FieldValues>({
+  const { control, handleSubmit, formState: { isSubmitting, isSubmitSuccessful } } = useForm<FieldValues>({
     defaultValues: { date: new Date().toISOString() },
   });
 
@@ -37,37 +39,36 @@ export default function Page() {
   const [bathPercent, setBathPercent] = useState<{ initialValue: number; value: number } | null>(null);
   const [baths, setBaths] = useState<Bath[] | null>(null);
   const [daysWithoutBath, setDaysWithoutBath] = useState<number | null>(null);
+  const [open, setOpen] = useState<boolean>(false);
 
-  // --- Fetchers ---
-  const fetchBaths = async (petId: number): Promise<Bath[]> => {
-    const res = await fetch(`/api/baths?id=${petId}`);
-    if (!res.ok) throw new Error("Erro ao buscar banhos");
-    return res.json();
-  };
-
-  const fetchAnimal = async (petId: number): Promise<Animal> => {
-    const res = await fetch(`/api/pets?id=${petId}`);
-    if (!res.ok) throw new Error("Erro ao buscar animal");
-    return res.json();
-  };
-
-  // --- Effects ---
   useEffect(() => {
-    const loadData = async () => {
-    try {
-      const [bathsData, animalData] = await Promise.all([
-        fetchBaths(Number(params.petId)),
-        fetchAnimal(Number(params.petId)),
-      ]);
-      setBaths(bathsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      setBathWeeks([animalData.bathsCycleDays / 7]);
-    } catch (err) {
-      console.error("Erro ao carregar dados:", err);
+    if (isSubmitSuccessful) {
+      setOpen(false);
     }
-  };
+  }, [isSubmitSuccessful]);
 
-  loadData();
-  }, [params.petId]);
+   // --- Effects ---
+    useEffect(() => {
+      const loadData = async () => {
+        try {
+          const petId = Number(params.petId);
+          const [bathsResult, animalResult] = await Promise.all([
+            getBaths(petId),
+            getAnimal(String(petId)),
+          ]);
+          if (bathsResult.data) {
+            setBaths(bathsResult.data.sort((a: Bath, b: Bath) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          }
+          if (animalResult.data) {
+            setBathWeeks([animalResult.data.bathsCycleDays / 7]);
+          }
+        } catch (err) {
+          console.error("Erro ao carregar dados:", err);
+        }
+      };
+
+      loadData();
+    }, [params.petId]);
 
   useEffect(() => {
     if (!baths || baths.length === 0) {
@@ -77,7 +78,7 @@ export default function Page() {
     }
 
     // Último banho registrado
-    const lastBath = baths[baths.length - 1];
+    const lastBath = baths[0];
     const lastBathDate = new Date(lastBath.date);
 
     const days = differenceInDays(new Date(), lastBathDate);
@@ -89,39 +90,38 @@ export default function Page() {
     setBathPercent({ initialValue: percent, value: 0 });
   }, [baths, bathWeeks]);
 
-  // --- Actions ---
   const onSubmit = async (data: FieldValues) => {
-    try {
-      const res = await fetch("/api/baths", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: data.date, petId: Number(params.petId) }),
-      });
+      try {
+        const dateValue = typeof data.date === 'string' ? new Date(data.date) : (data.date as Date);
+        const result = await createBath({
+          date: dateValue,
+          petId: Number(params.petId),
+        });
+ 
+        if (result.data) {
+          // Prepend to keep newest bath at the top of the list
+          setBaths((prev) => (prev ? [result.data, ...prev] : [result.data]));
+        }
+      } catch (err) {
+        console.error("Erro ao criar banho:", err);
+      }
+    };
 
-      if (!res.ok) throw new Error("Falha ao criar banho");
 
-      const newBath = (await res.json()) as Bath;
-      setBaths((prev) => (prev ? [...prev, newBath] : [newBath]));
-    } catch (err) {
-      console.error("Erro ao criar banho:", err);
-    }
-  };
+   const onCycleChange = async () => {
+     await updateBathsCycleDays(params.petId, bathWeeks[0] * 7);
+   };
 
-  const onCycleChange = async () => {
-    await fetch(`/api/pets?id=${params.petId}&bathsCycleDays=${bathWeeks[0] * 7}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-    });
-  };
-
-  const removeBath = async (bathId: number) => {
-    try {
-      await fetch(`/api/baths?id=${bathId}`, { method: "DELETE" });
-      setBaths((prev) => prev?.filter((b) => b.id !== bathId) ?? []);
-    } catch {
-      alert("Erro ao deletar banho");
-    }
-  };
+   const removeBath = async (bathId: number) => {
+     try {
+       const result = await deleteBath(bathId);
+       if (result.success) {
+         setBaths((prev) => prev?.filter((b) => b.id !== bathId) ?? []);
+       }
+     } catch {
+       alert("Erro ao deletar banho");
+     }
+   };
 
   if (!baths) {
     return (
@@ -140,8 +140,10 @@ export default function Page() {
         <div className="flex-1 overflow-y-auto">
           <section className="p-4 bg-muted/30 flex flex-col gap-4">
             <div className="space-y-4 flex flex-col items-center">
-              <Skeleton className="w-[188px] h-[188px] rounded-full" />
-              <Skeleton className="w-40 h-10 rounded-full" />
+              <Skeleton className="size-47 rounded-full " />
+              <Skeleton className="w-24 h-9" />
+              <Skeleton className="w-18 h-6" />
+              <Skeleton className="w-96 h-8 px-4 py-2 " />
             </div>
           </section>
           <section className="p-4 border-t-2 border-border">
@@ -186,9 +188,9 @@ export default function Page() {
         Banhos
       </header>
 
-      <Dialog>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button className="rounded-full fixed bottom-19 right-3 h-14 w-14 p-0 z-50 shadow-lg">
+          <Button  className="rounded-full fixed bottom-19 right-3 h-14 w-14 p-0 z-50 shadow-lg">
             <Plus className="size-6" />
           </Button>
         </DialogTrigger>
@@ -199,7 +201,7 @@ export default function Page() {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
             <DatePickerField control={control} name="date" label="Data do banho" />
             <DialogFooter>
-              <Button type="submit" className="w-full h-10 capitalize font-bold text-sm">
+              <Button loading={isSubmitting} type="submit" className="w-full h-10 capitalize font-bold text-sm">
                 Adicionar
               </Button>
             </DialogFooter>
@@ -235,12 +237,12 @@ export default function Page() {
           max={12}
           step={1}
           min={1}
-          labelFor="Tempo sem banho"
+          labelFor="TTempo sem banho em semanas"
           value={bathWeeks}
           labelValue={Math.floor(bathWeeks[0])}
           onValueChange={setBathWeeks}
           onValueCommit={onCycleChange}
-          labelTitle="Tempo sem banho"
+          labelTitle="Tempo sem banho em semanas"
         />
       </section>
       <section className="flex flex-col gap-2 p-4 border-t-2 border-border">

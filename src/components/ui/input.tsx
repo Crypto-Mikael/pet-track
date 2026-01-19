@@ -1,21 +1,71 @@
-import * as React from "react"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+type InputProps = React.ComponentProps<"input"> & {
+  label?: string;
+  error?: string;
+};
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+export function Input({
+  className,
+  type,
+  label,
+  error,
+  id,
+  ...props
+}: InputProps) {
+  const inputId = id ?? React.useId();
+
   return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
+    <div className="flex flex-col gap-1.5 w-full">
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="text-sm font-medium text-foreground"
+        >
+          {label}
+        </label>
       )}
-      {...props}
-    />
-  )
-}
+      <input
+        id={inputId}
+        type={type}
+        data-slot="input"
+        className={cn(
+          // Base
+          "w-full rounded-md border bg-transparent px-3",
 
-export { Input }
+          // Mobile-first sizing
+          "h-11 text-base md:h-9 md:text-sm",
+
+          // Colors
+          "border-input placeholder:text-muted-foreground dark:bg-input/30",
+
+          // Focus
+          "outline-none transition-[box-shadow,border-color]",
+          "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40",
+
+          // Error state
+          error &&
+            "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/40",
+
+          // Disabled
+          "disabled:cursor-not-allowed disabled:opacity-50",
+
+          className
+        )}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${inputId}-error` : undefined}
+        {...props}
+      />
+
+      {error && (
+        <span
+          id={`${inputId}-error`}
+          className="text-xs text-destructive"
+        >
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}

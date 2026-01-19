@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import type React from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 
 import {
@@ -14,8 +15,8 @@ import { Button } from '@/components/ui/button'
 import ReactCrop, {
   centerCrop,
   makeAspectCrop,
-  Crop,
-  PixelCrop,
+  type Crop,
+  type PixelCrop,
   convertToPixelCrop,
 } from 'react-image-crop'
 import { canvasPreview } from './canvasPreview'
@@ -153,11 +154,11 @@ export function ImageCropper({
   // --- Effects ---
   useEffect(() => {
     return () => {
-      if (preview && preview.startsWith('blob:')) {
-        URL.revokeObjectURL(preview)
+      if (preview?.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
       }
-    }
-  }, [preview])
+    };
+  }, [preview]);
 
   return (
     <div className={className}>

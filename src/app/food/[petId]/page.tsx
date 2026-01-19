@@ -1,11 +1,13 @@
-'use client'
-import React, { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { startOfDay, endOfDay, parse } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
 import { Plus, Trash2, ArrowLeft, Bone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import SliderTooltip from "@/components/ui/slider";
+import { updateDailyCalorieGoal, getAnimal } from "@/app/actions/pet";
+import { TZDate } from "@date-fns/tz";
 import { useParams, useRouter } from "next/navigation";
 import { CircularProgress } from "@/components/ui/circularProgress";
 import {
@@ -15,87 +17,109 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Animal, Food } from "@/lib/schema";
+import type { Animal, Food } from "@/lib/schema";
+import {
+  getFoods,
+  createFood,
+  updateFood,
+  deleteFood,
+} from "@/app/actions/food";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
-function calculateDailyCalories(foods: Food[] | null): number {
-  if (!foods || foods.length === 0) return 0;
-  return foods.reduce((sum, f) => sum + Number(f.kcal), 0);
-}
-
-function calculateCaloriePercentage(foods: Food[] | null, goal: string): number {
-  const dailyCalories = calculateDailyCalories(foods);
-  return Math.round((dailyCalories / Number(goal)) * 100);
-}
+const toNumber = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
 export default function DietPage() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
-  const [foods, setFoods] = useState<Food[] | null>(null);
+
+  const [foods, setFoods] = useState<Food[]>([]);
   const [animal, setAnimal] = useState<Animal | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const [open, setOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString());
+
+  const [selectedDate, setSelectedDate] = useState(
+    new TZDate().toISOString().slice(0, 10)
+  );
+
+  const [calorieGoal, setCalorieGoal] = useState<number>(0);
+
   const { register, handleSubmit, reset } = useForm<Partial<Food>>();
 
-  const fetchFoods = async (petId: string, selectedDate: Date) => {
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    const localDate = toZonedTime(selectedDate, timeZone);
-    
-    const dayStart = startOfDay(localDate);
-    const dayEnd = endOfDay(localDate);
-    
-    const startDateUTC = dayStart.toISOString();
-    const endDateUTC = new Date(dayEnd.getTime()).toISOString();
-    
-    const res = await fetch(`/api/foods?petId=${petId}&startDate=${startDateUTC}&endDate=${endDateUTC}`);
-    return await res.json() as Food[];
-  };
-
-  const fetchAnimal = async (petId: string) => {
-    const res = await fetch(`/api/pets?id=${petId}`);
-    return await res.json() as Animal;
-  };
-
   useEffect(() => {
+    let active = true;
+
     async function loadData() {
       try {
-        setFoods(null);
-        const dateObj = new Date(selectedDate);
-        const [foodsData, animalData] = await Promise.all([
-          fetchFoods(params.petId, dateObj),
-          fetchAnimal(params.petId),
+        setLoading(true);
+
+        const date = new Date(`${selectedDate}T00:00:00`);
+
+        const [foodsResult, animalResult] = await Promise.all([
+          getFoods(params.petId, date),
+          getAnimal(params.petId),
         ]);
-        setFoods(foodsData);
-        setAnimal(animalData);
+
+        if (!active) return;
+
+        setFoods(foodsResult.data ?? []);
+        setAnimal(animalResult.data ?? null);
+
+        if (animalResult.data) {
+          setCalorieGoal(Number(animalResult.data.dailyCalorieGoal) || 0);
+        }
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
+      } finally {
+        if (active) setLoading(false);
       }
     }
+
     loadData();
+    return () => {
+      active = false;
+    };
   }, [params.petId, selectedDate]);
 
+  const dailyCalories = useMemo(() => {
+    return foods.reduce((sum, f) => sum + toNumber(f.kcal), 0);
+  }, [foods]);
+
+  const caloriePercentage = useMemo(() => {
+    if (!calorieGoal) return 0;
+    return Math.round((dailyCalories / calorieGoal) * 100);
+  }, [dailyCalories, calorieGoal]);
+
   const onSubmit = async (data: Partial<Food>) => {
+    const payload = {
+      ...data,
+      petId: Number(params.petId),
+      createdAt: new Date(selectedDate),
+    } as Partial<Food>;
+    
+    console.log(payload)
     try {
       if (editingFood) {
-        const res = await fetch(`/api/foods?id=${editingFood.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        const updated = await res.json() as Food;
-        setFoods(prev => prev ? prev.map(f => f.id === updated.id ? updated : f) : [updated]);
-        setEditingFood(null);
+        const result = await updateFood(String(editingFood.id), payload);
+        if (result.data) {
+          setFoods((prev) =>
+            prev.map((f) => (f.id === result.data!.id ? result.data! : f))
+          );
+        }
       } else {
-        const res = await fetch("/api/foods", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        const newFood = await res.json() as Food;
-        setFoods(prev => prev ? [newFood, ...prev] : [newFood]);
+        const result = await createFood(payload);
+        if (result.data) {
+          setFoods((prev) => [result.data!, ...prev]);
+        }
       }
+
       reset();
+      setEditingFood(null);
       setOpen(false);
     } catch (err) {
       console.error("Erro ao salvar refeição:", err);
@@ -104,46 +128,50 @@ export default function DietPage() {
 
   const removeFood = async (id: number) => {
     try {
-      await fetch(`/api/foods?id=${id}`, { method: "DELETE" });
-      setFoods(prev => prev ? prev.filter(f => f.id !== id) : []);
+      const result = await deleteFood(String(id));
+      if (result.success) {
+        setFoods((prev) => prev.filter((f) => f.id !== id));
+      }
     } catch (err) {
       console.error("Erro ao deletar refeição:", err);
     }
   };
 
+  /* -------------------------------- render ------------------------------- */
+
   return (
     <>
-      <header className="relative py-2 border-b-2 border-border text-center text-3xl text-foreground shrink-0">
+      {/* HEADER */}
+      <header className="relative py-2 border-b-2 border-border text-center text-3xl">
         <Button
           className="absolute left-2"
           variant="ghost"
-          onClick={() => router.back()}
           size="icon"
+          onClick={() => router.back()}
         >
           <ArrowLeft />
         </Button>
         Alimentação
       </header>
 
-      <section className="p-4 border-b-2 border-border flex items-center justify-center">
+      {/* DATA */}
+      <section className="p-4 border-b-2 border-border flex justify-center">
         <div className="w-full max-w-md">
           <label className="block text-sm font-semibold mb-2">Data</label>
           <input
             type="date"
-            value={selectedDate.split('T')[0]}
-            onChange={(e) => {
-              const localDate = parse(e.target.value, 'yyyy-MM-dd', new Date());
-              setSelectedDate(localDate.toISOString());
-            }}
-            className="w-full border border-border rounded px-3 py-2 bg-background text-foreground text-sm"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full border rounded px-3 py-2 bg-background"
           />
         </div>
       </section>
 
-      <section className="p-4 bg-muted/30 flex flex-col gap-4 border-b-2 border-border">
-        {animal === null || foods === null ? (
+      {/* RESUMO */}
+      <section className="p-4 bg-muted/30 border-b-2 border-border">
+        {loading || !animal ? (
           <div className="flex flex-col items-center gap-4">
-            <Skeleton className="size-47 rounded-full" />
+            <Skeleton className="size-48 rounded-full" />
             <Skeleton className="w-40 h-6" />
           </div>
         ) : (
@@ -151,39 +179,46 @@ export default function DietPage() {
             <CircularProgress
               textValue="Calorias"
               size={188}
-              value={calculateCaloriePercentage(foods, animal.dailyCalorieGoal)}
+              value={caloriePercentage}
               icon={Bone}
             />
-            <div className="text-center text-sm text-muted-foreground">
-              {calculateDailyCalories(foods)} / {animal.dailyCalorieGoal} kcal
+
+            <div className="text-center text-sm text-muted-foreground mt-2">
+              {dailyCalories} / {calorieGoal} kcal
+            </div>
+
+            <div className="mt-4">
+              <SliderSection
+                petId={Number(params.petId)}
+                initialValue={calorieGoal}
+                onChange={setCalorieGoal}
+              />
             </div>
           </>
         )}
       </section>
 
+      {/* LISTA */}
       <section className="flex flex-col gap-4 p-4 h-[calc(100dvh-300px)] overflow-y-auto">
-        {foods === null ? (
+        {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-lg p-4 bg-card border-2 border-border flex flex-col gap-3 animate-pulse">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-5 w-20" />
-              <div className="flex gap-2">
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-9" />
-              </div>
-            </div>
+            <Skeleton key={i} className="h-32 rounded-lg" />
           ))
-        ) : foods.length > 0 ? (
+        ) : foods.length ? (
           foods.map((food) => (
-            <article key={food.id} className="border-2 border-border rounded-lg p-4 bg-card flex flex-col gap-3">
+            <article
+              key={food.id}
+              className="border-2 border-border rounded-lg p-4 bg-card flex flex-col gap-3"
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-primary/10">
                   <Bone className="text-primary" size={20} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">{food.name}</h3>
-                  <p className="text-sm text-muted-foreground">{food.amount}g</p>
+                  <h3 className="font-semibold">{food.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {food.amount}g
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-primary">{food.kcal}</p>
@@ -191,34 +226,38 @@ export default function DietPage() {
                 </div>
               </div>
 
-              {(food.protein || food.fat || food.carbs) && (
-                <div className="flex gap-4 text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-                  {food.protein && <span>P: {food.protein}g</span>}
-                  {food.fat && <span>G: {food.fat}g</span>}
-                  {food.carbs && <span>C: {food.carbs}g</span>}
+              {[food.protein, food.fat, food.carbs].some(
+                (v) => v != null
+              ) && (
+                <div className="flex gap-4 text-xs bg-muted/30 p-2 rounded">
+                  {food.protein != null && <span>P: {food.protein}g</span>}
+                  {food.fat != null && <span>G: {food.fat}g</span>}
+                  {food.carbs != null && <span>C: {food.carbs}g</span>}
                 </div>
               )}
 
               {food.notes && (
-                <p className="text-xs text-muted-foreground italic">{food.notes}</p>
+                <p className="text-xs italic text-muted-foreground">
+                  {food.notes}
+                </p>
               )}
 
               <div className="flex gap-2">
                 <Button
                   variant="secondary"
-                  className="flex-1 py-1 text-xs"
+                  className="flex-1 text-xs"
                   onClick={() => {
                     setEditingFood(food);
                     reset(food);
                     setOpen(true);
                   }}
                 >
-                  Editar
+                  EDITAR
                 </Button>
                 <Button
                   variant="destructive"
-                  className="p-1 w-9"
-                  onClick={() => food.id && removeFood(food.id)}
+                  className="w-9"
+                  onClick={() => removeFood(food.id!)}
                 >
                   <Trash2 size={16} />
                 </Button>
@@ -226,103 +265,93 @@ export default function DietPage() {
             </article>
           ))
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Nenhuma refeição registrada hoje
+          <div className="text-center text-muted-foreground h-full flex items-center justify-center">
+            Nenhuma refeição registrada
           </div>
         )}
       </section>
 
+      {/* FAB */}
       <Button
         onClick={() => {
+          reset({ amount: "0", kcal: "0", protein: "0", fat: "0", carbs: "0" });
           setEditingFood(null);
-          reset({ amount: "0", kcal: "0" });
           setOpen(true);
         }}
-        className="rounded-full fixed bottom-20 right-6 h-14 w-14 p-0 z-50 shadow-lg"
+        className="rounded-full fixed bottom-20 right-6 h-14 w-14 shadow-lg"
       >
-        <Plus className="size-6" />
+        <Plus />
       </Button>
 
+      {/* MODAL */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="p-6">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingFood ? "Editar Refeição" : "Adicionar Refeição"}</DialogTitle>
+            <DialogTitle>
+              {editingFood ? "Editar Refeição" : "Adicionar Refeição"}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
-            <div>
-              <label className="block text-sm font-semibold mb-1">Nome da Refeição</label>
-              <input
-                {...register("name", { required: true })}
-                className="w-full border border-border rounded p-2 bg-background text-foreground"
-                placeholder="Ex: Ração, Fruta, Snack"
-              />
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-semibold mb-1">Quantidade (g)</label>
-                <input
-                  {...register("amount", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Calorias (kcal)</label>
-                <input
-                  {...register("kcal", { valueAsNumber: true, required: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground"
-                  placeholder="0"
-                />
-              </div>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-4"
+          >
+            <Input
+              label="Nome da Refeição"
+              {...register("name", { required: true })}
+              placeholder="Nome"
+              className="border rounded p-2"
+            />
+
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                label="Quantidade (g)"
+                {...register("amount", { valueAsNumber: true,  })}
+                type="number"
+                placeholder="Quantidade (g)"
+                className="border rounded p-2"
+              />
+              <Input
+                label="Calorias (kcal)"
+                {...register("kcal", {
+                  valueAsNumber: true,
+                  required: true,
+                })}
+                type="number"
+                placeholder="Calorias"
+                className="border rounded p-2"
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs font-semibold mb-1">Proteína (g)</label>
-                <input
-                  {...register("protein", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Gordura (g)</label>
-                <input
-                  {...register("fat", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Carbos (g)</label>
-                <input
-                  {...register("carbs", { valueAsNumber: true })}
-                  type="number"
-                  step="0.1"
-                  className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-1">Observações</label>
-              <textarea
-                {...register("notes")}
-                className="w-full border border-border rounded p-2 bg-background text-foreground text-sm"
-                placeholder="Ex: Com tempero, sem sal"
-                rows={2}
+              <Input
+                label="Proteína (g)"
+                {...register("protein", { valueAsNumber: true })}
+                type="number"
+                placeholder="Proteína"
+                className="border rounded p-2 text-sm"
+              />
+              <Input
+                label="Gordura (g)"
+                {...register("fat", { valueAsNumber: true })}
+                type="number"
+                placeholder="Gordura"
+                className="border rounded p-2 text-sm"
+              />
+              <Input
+                label="Carbos (g)"
+                {...register("carbs", { valueAsNumber: true })}
+                type="number"
+                placeholder="Carbos"
+                className="border rounded p-2 text-sm"
               />
             </div>
+
+            <Textarea
+              {...register("notes")}
+              placeholder="Observações"
+              className="border rounded p-2 text-sm"
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -338,3 +367,40 @@ export default function DietPage() {
     </>
   );
 }
+
+/* ----------------------------- slider local ----------------------------- */
+
+function SliderSection({
+  petId,
+  initialValue,
+  onChange,
+}: {
+  petId: number;
+  initialValue: number;
+  onChange: (n: number) => void;
+}) {
+  const [value, setValue] = useState<number[]>([initialValue]);
+
+  useEffect(() => {
+    setValue([initialValue]);
+  }, [initialValue]);
+
+  return (
+    <SliderTooltip
+      min={100}
+      max={5000}
+      step={50}
+      labelTitle="Meta diária de calorias"
+      labelValue={value[0]}
+      value={value}
+      onValueChange={(v) => {
+        setValue(v);
+        onChange(v[0]);
+      }}
+      onValueCommit={(v) =>
+        updateDailyCalorieGoal(petId, v[0].toString())
+      }
+    />
+  );
+}
+

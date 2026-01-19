@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Mars, Venus } from "lucide-react";
 import { ImageCropper } from "../input/imageCropper";
 import { useUploadThing } from "@/app/api/uploadthing/utils";
+import { createAnimal } from "@/app/actions/pet";
 
 export const dogBreeds = [
   { label: "Vira-lata (SRD)", value: "vira-lata" },
@@ -68,7 +69,7 @@ const formSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres."),
   details: z.string().optional(),
   breed: z.string({ error: "Por favor, selecione uma raça." }),
-  age: z.date({ error: "Por favor, selecione a data de nascimento." }),
+  age: z.date({ error: "Por favor, selecione uma data de nascimento." }),
   lastBath: z.date().optional(),
   blob: z.unknown().optional(),
   weightKg: z.string().optional(),
@@ -80,6 +81,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function NewPetForm() {
   const { startUpload } = useUploadThing("imageUploader");
+  const [loading, setLoading] = React.useState(false);
   const {
     control,
     handleSubmit,
@@ -114,254 +116,253 @@ export default function NewPetForm() {
   };
 
   const onSubmit = async ({ name, details, breed, age, gender, blob, lastBath, weightKg }: FormValues) => {
+    setLoading(true);
     try {
       const fileUrl = await uploadFile(blob as File);
 
-      const body = {
+      const result = await createAnimal({
         name,
         details,
         breed,
         gender,
         weightKg,
-        age: age.toISOString(),
-        lastBath: lastBath?.toISOString(),
+        age: new Date(age),
+        lastBath: new Date(lastBath || new Date()),
         imageUrl: fileUrl,
-      };
-
-      const petResponse = await fetch("/api/pets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
       });
 
-      if (!petResponse.ok) {
-        throw new Error("Falha ao criar o pet.");
+      if (result.error) {
+        throw new Error(result.error);
       }
-      if (petResponse.ok) {
+      if (result.data) {
         window.location.href = "/";
       }
     } catch (error) {
       console.error("Erro ao criar o pet:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      <ImageCropper
-        className="flex flex-col"
-        label="Selecione uma imagem do pet"
-        aspect={1}
-        onChange={(url) => {
-          setValue("blob", url);
-        }}
-      />
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 max-w-md w-full mx-auto">
+      <>
+        <ImageCropper
+          className="flex flex-col"
+          label="Selecione uma imagem do pet"
+          aspect={1}
+          onChange={(url) => {
+            setValue("blob", url);
+          }}
+        />
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 max-w-md w-full mx-auto">
 
-        {/* Nome */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="name">Nome</Label>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => <Input id="name" {...field} placeholder="Nome do pet" />}
-          />
-          {errors.name && <span className="text-destructive text-sm">{errors.name.message}</span>}
-        </div>
-
-        {/* Detalhes */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="details">Detalhes</Label>
-           <Controller
-            name="details"
-            control={control}
-            render={({ field }) => (
-                <Textarea id="details" {...field} placeholder="Informações adicionais sobre o pet" />
-            )}
-          />
-          {errors.details && <span className="text-destructive text-sm">{errors.details.message}</span>}
-        </div>
-
-        {/* Data de Nascimento */}
-        <div className="flex flex-col gap-2">
-            <Label htmlFor="age">Data de Nascimento</Label>
+          {/* Nome */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Nome</Label>
             <Controller
-                name="age"
+              name="name"
+              control={control}
+              render={({ field }) => <Input id="name" {...field} placeholder="Nome do pet" />}
+            />
+            {errors.name && <span className="text-destructive text-sm">{errors.name.message}</span>}
+          </div>
+
+          {/* Detalhes */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="details">Detalhes</Label>
+             <Controller
+              name="details"
+              control={control}
+              render={({ field }) => (
+                  <Textarea id="details" {...field} placeholder="Informações adicionais sobre o pet" />
+              )}
+            />
+            {errors.details && <span className="text-destructive text-sm">{errors.details.message}</span>}
+          </div>
+
+          {/* Data de Nascimento */}
+          <div className="flex flex-col gap-2">
+              <Label htmlFor="age">Data de Nascimento</Label>
+              <Controller
+                  name="age"
+                  control={control}
+                  render={({ field }) => (
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <Button
+                                  variant={"outline"}
+                                  className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                              >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? (
+                                      format(field.value, "PPP", { locale: ptBR })
+                                  ) : (
+                                      <span>Selecione uma data</span>
+                                  )}
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) =>
+                                    date > new Date() || date < new Date("1990-01-01")
+                                  }
+                                  captionLayout="dropdown"
+                              />
+                          </PopoverContent>
+                      </Popover>
+                  )}
+              />
+              {errors.age && <span className="text-destructive text-sm">{errors.age.message}</span>}
+          </div>
+
+
+          {/* Sexo */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="gender">Sexo</Label>
+            <Controller
+                name="gender"
                 control={control}
                 render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                    format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                    <span>Selecione uma data</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1990-01-01")
-                                }
-                                captionLayout="dropdown"
-                            />
-                        </PopoverContent>
-                    </Popover>
+                  <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      defaultValue={field.value}
+                      className="flex gap-6"
+                  >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="male" id="male" />
+                        <Label htmlFor="male" className="flex flex-row items-center gap-1 cursor-pointer">
+                          <Mars className="w-4 h-4" /> Macho
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="female" id="female" />
+                        <Label htmlFor="female" className="flex flex-row items-center gap-1 cursor-pointer">
+                          <Venus className="w-4 h-4" /> Fêmea
+                        </Label>
+                      </div>
+                  </RadioGroup>
                 )}
             />
-            {errors.age && <span className="text-destructive text-sm">{errors.age.message}</span>}
-        </div>
+            {errors.gender && <span className="text-destructive text-sm">{errors.gender.message}</span>}
+          </div>
 
-
-        {/* Sexo */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="gender">Sexo</Label>
-          <Controller
-              name="gender"
+          {/* Tipo de Animal */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="animalType">Tipo de Animal</Label>
+            <Controller
+              name="animalType"
               control={control}
+              defaultValue="dog"
               render={({ field }) => (
                 <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                    className="flex gap-6"
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    setValue("breed", value === "other" ? "undefined" : value === "dog" ? dogBreeds[0].value : catBreeds[0].value);
+                  }}
+                  value={field.value}
+                  className="flex gap-6"
                 >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="male" />
-                      <Label htmlFor="male" className="flex flex-row items-center gap-1 cursor-pointer">
-                        <Mars className="w-4 h-4" /> Macho
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="female" id="female" />
-                      <Label htmlFor="female" className="flex flex-row items-center gap-1 cursor-pointer">
-                        <Venus className="w-4 h-4" /> Fêmea
-                      </Label>
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="dog" id="dog" />
+                    <Label htmlFor="dog" className="cursor-pointer">Cachorro</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="cat" id="cat" />
+                    <Label htmlFor="cat" className="cursor-pointer">Gato</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="other" id="other" />
+                    <Label htmlFor="other" className="cursor-pointer">Outro</Label>
+                  </div>
                 </RadioGroup>
               )}
-          />
-          {errors.gender && <span className="text-destructive text-sm">{errors.gender.message}</span>}
-        </div>
-
-        {/* Tipo de Animal */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="animalType">Tipo de Animal</Label>
-          <Controller
-            name="animalType"
-            control={control}
-            defaultValue="dog"
-            render={({ field }) => (
-              <RadioGroup
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  setValue("breed", value === "other" ? "undefined" : value === "dog" ? dogBreeds[0].value : catBreeds[0].value);
-                }}
-                value={field.value}
-                className="flex gap-6"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="dog" id="dog" />
-                  <Label htmlFor="dog" className="cursor-pointer">Cachorro</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="cat" id="cat" />
-                  <Label htmlFor="cat" className="cursor-pointer">Gato</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="other" id="other" />
-                  <Label htmlFor="other" className="cursor-pointer">Outro</Label>
-                </div>
-              </RadioGroup>
-            )}
-          />
-
-          {/* Peso */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="weightKg">Peso (kg)</Label>
-            <Controller
-              name="weightKg"
-              control={control}
-              render={({ field }) => <Input type="number" id="weightKg" {...field} placeholder="Peso em kg" />}
             />
-            {errors.weightKg && <span className="text-destructive text-sm">{errors.weightKg.message}</span>}
-          </div>
 
-          {/* Raça */}
-          {watch("animalType") !== "other" && (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="breed">Raça</Label>
-            <Controller
-              name="breed"
-              control={control}
-              render={({ field }) => (
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione uma raça" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(watch("animalType") === "dog" ? dogBreeds : catBreeds).map((breed) => (
-                      <SelectItem key={breed.value} value={breed.value}>
-                        {breed.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.breed && <span className="text-destructive text-sm">{errors.breed.message}</span>}
-          </div>
-        )}
-        </div>
+            {/* Peso */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="weightKg">Peso (kg)</Label>
+              <Controller
+                name="weightKg"
+                control={control}
+                render={({ field }) => <Input type="number" id="weightKg" {...field} placeholder="Peso em kg" />}
+              />
+              {errors.weightKg && <span className="text-destructive text-sm">{errors.weightKg.message}</span>}
+            </div>
 
-        {/* Último Banho */}
-        <div className="flex flex-col gap-2">
-            <Label htmlFor="lastBath">Último Banho</Label>
-            <Controller
-                name="lastBath"
+            {/* Raça */}
+            {watch("animalType") !== "other" && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="breed">Raça</Label>
+              <Controller
+                name="breed"
                 control={control}
                 render={({ field }) => (
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value ? (
-                                    format(field.value, "PPP", { locale: ptBR })
-                                ) : (
-                                    <span>Selecione uma data</span>
-                                )}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date > new Date() || date < new Date("1990-01-01")
-                                }
-                                captionLayout="dropdown"
-                            />
-                        </PopoverContent>
-                    </Popover>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione uma raça" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(watch("animalType") === "dog" ? dogBreeds : catBreeds).map((breed) => (
+                        <SelectItem key={breed.value} value={breed.value}>
+                          {breed.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
-            />
-            {errors.lastBath && <span className="text-destructive text-sm">{errors.lastBath.message}</span>}
-        </div>
+              />
+              {errors.breed && <span className="text-destructive text-sm">{errors.breed.message}</span>}
+            </div>
+            )}
+          </div>
 
-        {/* Botão */}
-        <Button type="submit" className="w-full">Salvar</Button>
-      </form>
-    </>
+          {/* Último Banho */}
+          <div className="flex flex-col gap-2">
+              <Label htmlFor="lastBath">Último Banho</Label>
+              <Controller
+                  name="lastBath"
+                  control={control}
+                  render={({ field }) => (
+                      <Popover>
+                          <PopoverTrigger asChild>
+                              <Button
+                                  variant={"outline"}
+                                  className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                              >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? (
+                                      format(field.value, "PPP", { locale: ptBR })
+                                  ) : (
+                                      <span>Selecione uma data</span>
+                                  )}
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) =>
+                                    date > new Date() || date < new Date("1990-01-01")
+                                  }
+                                  captionLayout="dropdown"
+                              />
+                          </PopoverContent>
+                      </Popover>
+                  )}
+              />
+              {errors.lastBath && <span className="text-destructive text-sm">{errors.lastBath.message}</span>}
+          </div>
+
+          {/* Botão */}
+          <Button loading={loading} type="submit" className="w-full">
+            ADICIONAR
+          </Button>
+        </form>
+      </>
   );
 }
