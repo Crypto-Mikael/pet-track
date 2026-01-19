@@ -31,7 +31,7 @@ export default function Page() {
   const params = useParams<{ petId: string }>();
   const router = useRouter();
 
-  const { control, handleSubmit } = useForm<FieldValues>({
+  const { control, handleSubmit, formState: { isSubmitting, isSubmitSuccessful } } = useForm<FieldValues>({
     defaultValues: { date: new Date().toISOString() },
   });
 
@@ -39,6 +39,13 @@ export default function Page() {
   const [bathPercent, setBathPercent] = useState<{ initialValue: number; value: number } | null>(null);
   const [baths, setBaths] = useState<Bath[] | null>(null);
   const [daysWithoutBath, setDaysWithoutBath] = useState<number | null>(null);
+  const [open, setOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isSubmitSuccessful) {
+      setOpen(false);
+    }
+  }, [isSubmitSuccessful]);
 
    // --- Effects ---
     useEffect(() => {
@@ -133,8 +140,10 @@ export default function Page() {
         <div className="flex-1 overflow-y-auto">
           <section className="p-4 bg-muted/30 flex flex-col gap-4">
             <div className="space-y-4 flex flex-col items-center">
-              <Skeleton className="w-[188px] h-[188px] rounded-full" />
-              <Skeleton className="w-40 h-10 rounded-full" />
+              <Skeleton className="size-47 rounded-full " />
+              <Skeleton className="w-24 h-9" />
+              <Skeleton className="w-18 h-6" />
+              <Skeleton className="w-96 h-8 px-4 py-2 " />
             </div>
           </section>
           <section className="p-4 border-t-2 border-border">
@@ -179,9 +188,9 @@ export default function Page() {
         Banhos
       </header>
 
-      <Dialog>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button className="rounded-full fixed bottom-19 right-3 h-14 w-14 p-0 z-50 shadow-lg">
+          <Button  className="rounded-full fixed bottom-19 right-3 h-14 w-14 p-0 z-50 shadow-lg">
             <Plus className="size-6" />
           </Button>
         </DialogTrigger>
@@ -192,7 +201,7 @@ export default function Page() {
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
             <DatePickerField control={control} name="date" label="Data do banho" />
             <DialogFooter>
-              <Button type="submit" className="w-full h-10 capitalize font-bold text-sm">
+              <Button loading={isSubmitting} type="submit" className="w-full h-10 capitalize font-bold text-sm">
                 Adicionar
               </Button>
             </DialogFooter>

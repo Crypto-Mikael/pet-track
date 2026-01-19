@@ -72,11 +72,9 @@ export async function createFood(data: Partial<Food>) {
   try {
     const { petId, name, amount, kcal, protein, fat, carbs, notes, createdAt } =
       data;
-
     if (!petId || !name || !kcal || !createdAt) {
       return { error: "Dados obrigatórios ausentes" };
     }
-
     const [pet] = await db
       .select()
       .from(animal)

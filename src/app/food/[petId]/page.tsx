@@ -99,9 +99,10 @@ export default function DietPage() {
     const payload = {
       ...data,
       petId: Number(params.petId),
-      date: new TZDate(`${selectedDate}T00:00:00`),
+      createdAt: new Date(selectedDate),
     } as Partial<Food>;
-
+    
+    console.log(payload)
     try {
       if (editingFood) {
         const result = await updateFood(String(editingFood.id), payload);
@@ -273,7 +274,7 @@ export default function DietPage() {
       {/* FAB */}
       <Button
         onClick={() => {
-          reset({ amount: 0, kcal: 0 });
+          reset({ amount: "0", kcal: "0", protein: "0", fat: "0", carbs: "0" });
           setEditingFood(null);
           setOpen(true);
         }}
@@ -305,7 +306,7 @@ export default function DietPage() {
             <div className="grid grid-cols-2 gap-2">
               <Input
                 label="Quantidade (g)"
-                {...register("amount", { valueAsNumber: true })}
+                {...register("amount", { valueAsNumber: true,  })}
                 type="number"
                 placeholder="Quantidade (g)"
                 className="border rounded p-2"
