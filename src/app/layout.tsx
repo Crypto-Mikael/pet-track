@@ -8,10 +8,39 @@ import NavBar from '@/components/feat/NavBar'
 import { ThemeProvider } from "@/components/feat/ThemeProvider"
 import { ptBR } from '@clerk/localizations'
 import NavTrail from '@/components/feat/NavTrail'
+import ServiceWorkerRegister from '@/components/feat/ServiceWorkerRegister'
 
 export const metadata: Metadata = {
   title: 'Pet Track',
   description: 'Track your pet\'s health and wellness',
+  manifest: '/manifest.json',
+  themeColor: '#6766e6',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Pet Track',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Pet Track',
+    title: 'Pet Track',
+    description: 'Track your pet\'s health and wellness',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Pet Track',
+    description: 'Track your pet\'s health and wellness',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+  },
 }
 
 export default function RootLayout({
@@ -25,6 +54,7 @@ export default function RootLayout({
     >
       <html suppressHydrationWarning lang="pt-BR" className='bg-background'>
         <body suppressHydrationWarning className='h-dvh flex flex-col'>
+          <ServiceWorkerRegister />
           <ThemeProvider 
             attribute="class" 
             defaultTheme="system" 
