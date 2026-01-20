@@ -275,11 +275,69 @@ export async function deleteAnimal(id: string) {
       return { error: "ID inválido" };
     }
 
-    await db.delete(animal).where(eq(animal.id, animalId));
+    // Check authorization
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    // Check if user is the owner of the animal
+    const animalUserRes = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, animalId),
+          eq(animalUsers.userId, user.id),
+          eq(animalUsers.role, "owner")
+        )
+      )
+      .limit(1);
+
+    if (animalUserRes.length === 0) {
+      return { error: "Apenas o proprietário pode deletar o animal" };
+    }
+
+    // Delete related records in correct order to avoid foreign key constraints
+    await db.transaction(async (tx) => {
+      // Delete animal-user associations
+      await tx.delete(animalUsers).where(eq(animalUsers.animalId, animalId));
+      
+      // Delete baths
+      await tx.delete(baths).where(eq(baths.petId, animalId));
+      
+      // Delete foods
+      await tx.delete(foods).where(eq(foods.petId, animalId));
+      
+      // Delete vaccinations
+      await tx.delete(vaccinations).where(eq(vaccinations.petId, animalId));
+      
+      // Finally delete the animal
+      await tx.delete(animal).where(eq(animal.id, animalId));
+    });
 
     return { success: true };
   } catch (error) {
     console.error("Erro ao deletar animal:", error);
+    
+    // Check for specific foreign key constraint errors
+    if (error instanceof Error) {
+      if (error.message.includes('foreign key constraint')) {
+        return { error: "Não é possível deletar o animal devido a registros relacionados" };
+      }
+    }
+    
     return { error: "Erro ao deletar animal" };
   }
 }
