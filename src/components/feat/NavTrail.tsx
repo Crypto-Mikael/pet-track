@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/', icon: Home, name: 'Home' },
   { href: '/pet', icon: PawPrint, name: 'Animals' },
-  { href: '/settings', icon: Settings, name: 'Settings' },
   // { href: '/shops', icon: Store },
   // { href: '/user', icon: User, name: 'User' },
   // { href: '/news', icon: Bell },
@@ -38,6 +37,18 @@ export default function NavTrail() {
 
           </div>
       ))}
+        <div className='absolute bottom-6 left-5 flex flex-col items-center gap-1 font-light'>          
+          <Button
+            className="rounded-full w-14 h-14 border-border border-2"
+            variant={pathName === '/user' ? 'default' : 'secondary'}
+            size="icon"
+            asChild
+          >
+            <Link className="px-6" href="/user">
+              <Settings className={`${pathName === '/user' ? 'text-primary-foreground' : 'text-foreground'} scale-200`} />
+            </Link>
+          </Button>
+        </div>
 
     </nav>
   </>;
