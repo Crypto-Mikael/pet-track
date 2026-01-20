@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
 import { updateDailyCalorieGoal, getAnimal } from "@/app/actions/pet";
 import { TZDate } from "@date-fns/tz";
+import { toZonedTime } from "date-fns-tz";
 import { useParams, useRouter } from "next/navigation";
 import { CircularProgress } from "@/components/ui/circularProgress";
 import {
@@ -96,13 +97,14 @@ export default function DietPage() {
   }, [dailyCalories, calorieGoal]);
 
   const onSubmit = async (data: Partial<Food>) => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const localDate = toZonedTime(`${selectedDate}T00:00:00`, timeZone);
+    
     const payload = {
       ...data,
       petId: Number(params.petId),
-      createdAt: new Date(selectedDate),
+      createdAt: localDate,
     } as Partial<Food>;
-    
-    console.log(payload)
     try {
       if (editingFood) {
         const result = await updateFood(String(editingFood.id), payload);
@@ -139,6 +141,9 @@ export default function DietPage() {
 
   const repeatFood = async (food: Food) => {
     try {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const localDate = toZonedTime(`${selectedDate}T00:00:00`, timeZone);
+      
       const payload = {
         name: food.name,
         amount: food.amount,
@@ -148,7 +153,7 @@ export default function DietPage() {
         carbs: food.carbs,
         notes: food.notes,
         petId: Number(params.petId),
-        createdAt: new Date(selectedDate),
+        createdAt: localDate,
       } as Partial<Food>;
 
       const result = await createFood(payload);

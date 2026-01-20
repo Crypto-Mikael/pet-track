@@ -9,6 +9,7 @@ export const createFoodSchema = z.object({
   fat: z.coerce.number().optional().nullable(),
   carbs: z.coerce.number().optional().nullable(),
   notes: z.string().optional().nullable(),
+  createdAt: z.coerce.date(),
 });
 
 export const updateFoodSchema = z.object({
