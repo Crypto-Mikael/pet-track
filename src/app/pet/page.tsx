@@ -8,15 +8,26 @@ import { type Animal } from "@/lib/schema";
 type AnimalWithRole = Animal & {
   role: "owner" | "caretaker" | "vet";
 };
-import { Edit, List, Trash } from "lucide-react";
+import { Edit, List, Trash, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getAnimals, removeAnimalAssociation } from "@/app/actions/pet";
+import { getAnimals, deleteAnimal as deleteAnimalAction, removeAnimalAssociation } from "@/app/actions/pet";
 
 export default function Page() {
     const [animals, setAnimals] = useState<AnimalWithRole[] | null >(null);
 
-const handleRemoveAssociation = async (animalId: number) => {
+const handleDeleteAnimal = async (id: number) => {
+      try {
+        const result = await deleteAnimalAction(String(id));
+        if (result.success) {
+          setAnimals(prevAnimals => prevAnimals ? prevAnimals.filter(animal => animal.id !== id) : null);
+        }
+      } catch (error) {
+        console.error("Erro ao deletar animal:", error);
+      }
+    }
+
+    const handleRemoveAssociation = async (animalId: number) => {
       try {
         const result = await removeAnimalAssociation(animalId);
         if ('success' in result && result.success) {
@@ -33,13 +44,14 @@ const handleRemoveAssociation = async (animalId: number) => {
           const result = await getAnimals();
           if (result.data) {
             setAnimals(result.data);
+            console.log(result);
+
           }
         } catch (error) {
           console.error("Erro ao buscar dados:", error);
         }
       }
       fetchData();
-
   }, []);
 
   if (!animals) {
@@ -63,9 +75,22 @@ const handleRemoveAssociation = async (animalId: number) => {
             <Link className="grow" href={`/pet/${animal.id}`}>
               <ListItem props={{ name: animal.name, details: animal.details ?? '', imageUrl: animal.imageUrl }} />
             </Link>
-            <div className="flex justify-between flex-col ">
+<div className="flex justify-between flex-col gap-2">
               {animal.role === 'owner' && (
-                <HoldToConfirmButton icon={<Trash className="z-50" />} progressColor="bg-destructive" buttonText="" onHoldFinished={() => {handleRemoveAssociation(animal.id)}} />
+                <HoldToConfirmButton 
+                  icon={<Trash className="z-50" />} 
+                  progressColor="bg-destructive" 
+                  buttonText="Delete" 
+                  onHoldFinished={() => {handleDeleteAnimal(animal.id)}} 
+                />
+              )}
+              {(animal.role === 'caretaker' || animal.role === 'vet') && (
+                <HoldToConfirmButton 
+                  icon={<X className="z-50" />} 
+                  progressColor="bg-secondary" 
+                  buttonText="Remove" 
+                  onHoldFinished={() => {handleRemoveAssociation(animal.id)}} 
+                />
               )}
             </div>
           </div>
