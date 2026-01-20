@@ -310,22 +310,26 @@ export async function deleteAnimal(id: string) {
     }
 
     // Delete related records in correct order to avoid foreign key constraints
-    await db.transaction(async (tx) => {
+    // Note: Using sequential deletes since neon-http doesn't support transactions
+    try {
       // Delete animal-user associations
-      await tx.delete(animalUsers).where(eq(animalUsers.animalId, animalId));
+      await db.delete(animalUsers).where(eq(animalUsers.animalId, animalId));
       
       // Delete baths
-      await tx.delete(baths).where(eq(baths.petId, animalId));
+      await db.delete(baths).where(eq(baths.petId, animalId));
       
       // Delete foods
-      await tx.delete(foods).where(eq(foods.petId, animalId));
+      await db.delete(foods).where(eq(foods.petId, animalId));
       
       // Delete vaccinations
-      await tx.delete(vaccinations).where(eq(vaccinations.petId, animalId));
+      await db.delete(vaccinations).where(eq(vaccinations.petId, animalId));
       
       // Finally delete the animal
-      await tx.delete(animal).where(eq(animal.id, animalId));
-    });
+      await db.delete(animal).where(eq(animal.id, animalId));
+    } catch (deleteError) {
+      console.error("Error during deletion sequence:", deleteError);
+      throw deleteError;
+    }
 
     return { success: true };
   } catch (error) {
