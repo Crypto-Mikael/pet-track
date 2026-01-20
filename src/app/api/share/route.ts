@@ -16,36 +16,24 @@ export async function POST(req: NextRequest) {
     const role = searchParams.get("role");
 
     if (!petId || !role) {
-      return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Parâmetros inválidos" },
+        { status: 400 },
+      );
     }
 
-    let usersRes = await db
+    const usersRes = await db
       .select()
       .from(users)
       .where(eq(users.clerkId, clerkUser.id))
       .limit(1);
 
-    let user = usersRes[0];
-    
-    // Create user if they don't exist yet
+    const user = usersRes[0];
     if (!user) {
-      const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
-      const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim();
-      
-      const inserted = await db
-        .insert(users)
-        .values({
-          clerkId: clerkUser.id,
-          email,
-          name,
-          cpf: "",
-          phone: "",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
-      
-      user = inserted[0];
+      return NextResponse.json(
+        { error: "Usuário não encontrado" },
+        { status: 404 },
+      );
     }
 
     // Check if pet exists
@@ -56,7 +44,10 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (petExists.length === 0) {
-      return NextResponse.json({ error: "Pet não encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Pet não encontrado" },
+        { status: 404 },
+      );
     }
 
     // Check if user already has access to this pet
@@ -72,7 +63,10 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (existingRelation.length > 0) {
-      return NextResponse.json({ error: "Você já tem acesso a este pet" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Você já tem acesso a este pet" },
+        { status: 400 },
+      );
     }
 
     // Add user to pet with specified role
@@ -87,6 +81,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Erro no compartilhamento:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
+      { status: 500 },
+    );
   }
 }
