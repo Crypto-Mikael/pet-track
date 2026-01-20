@@ -1,8 +1,9 @@
 "use server";
 
 import db from "@/lib/db";
-import { foods, animal, Food } from "@/lib/schema";
+import { foods, animal, animalUsers, users, Food } from "@/lib/schema";
 import { eq, gte, lte, and, desc } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
 import {
   createFoodSchema,
   updateFoodSchema,
@@ -15,17 +16,48 @@ import { toZonedTime } from "date-fns-tz";
 
 export async function getFoods(petId: string, selectedDate: Date) {
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const petIdNum = Number(petId);
+    if (Number.isNaN(petIdNum)) {
+      return { error: "petId deve ser um número válido" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, petIdNum),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
+    }
+
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const localDate = toZonedTime(selectedDate, timeZone);
     const dayStart = startOfDay(localDate);
     const dayEnd = endOfDay(localDate);
     const startDateUTC = dayStart.toISOString();
     const endDateUTC = new Date(dayEnd.getTime()).toISOString();
-
-    const petIdNum = Number(petId);
-    if (Number.isNaN(petIdNum)) {
-      return { error: "petId deve ser um número válido" };
-    }
 
     const conditions = [eq(foods.petId, petIdNum)];
     conditions.push(gte(foods.createdAt, new Date(startDateUTC)));
@@ -75,6 +107,22 @@ export async function createFood(data: Partial<Food>) {
     if (!petId || !name || !kcal || !createdAt) {
       return { error: "Dados obrigatórios ausentes" };
     }
+const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
     const [pet] = await db
       .select()
       .from(animal)
@@ -83,6 +131,21 @@ export async function createFood(data: Partial<Food>) {
 
     if (!pet) {
       return { error: "Pet não encontrado" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, petId),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
     }
     const food = {
       petId,

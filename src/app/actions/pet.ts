@@ -5,6 +5,7 @@ import db from "@/lib/db";
 import {
   animal,
   users,
+  animalUsers,
   baths,
   foods,
   vaccinations,
@@ -32,10 +33,26 @@ export async function getAnimals() {
       return { error: "Usuário não encontrado" };
     }
 
-    const animals = await db
-      .select()
+const animals = await db
+      .select({
+        id: animal.id,
+        name: animal.name,
+        details: animal.details,
+        breed: animal.breed,
+        imageUrl: animal.imageUrl,
+        gender: animal.gender,
+        age: animal.age,
+        ownerId: animal.ownerId,
+        weightKg: animal.weightKg,
+        bathsCycleDays: animal.bathsCycleDays,
+        dailyCalorieGoal: animal.dailyCalorieGoal,
+        createdAt: animal.createdAt,
+        updatedAt: animal.updatedAt,
+        role: animalUsers.role,
+      })
       .from(animal)
-      .where(eq(animal.ownerId, user.id));
+      .innerJoin(animalUsers, eq(animal.id, animalUsers.animalId))
+      .where(eq(animalUsers.userId, user.id));
     return { data: animals };
   } catch (error) {
     console.error("Erro ao buscar animais:", error);
@@ -50,14 +67,51 @@ export async function getAnimal(id: string) {
       return { error: "ID inválido" };
     }
 
-    const [animalData] = await db
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
       .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const [animalData] = await db
+      .select({
+        id: animal.id,
+        name: animal.name,
+        details: animal.details,
+        breed: animal.breed,
+        imageUrl: animal.imageUrl,
+        gender: animal.gender,
+        age: animal.age,
+        ownerId: animal.ownerId,
+        weightKg: animal.weightKg,
+        bathsCycleDays: animal.bathsCycleDays,
+        dailyCalorieGoal: animal.dailyCalorieGoal,
+        createdAt: animal.createdAt,
+        updatedAt: animal.updatedAt,
+        role: animalUsers.role,
+      })
       .from(animal)
-      .where(eq(animal.id, animalId))
+      .innerJoin(animalUsers, eq(animal.id, animalUsers.animalId))
+      .where(
+        and(
+          eq(animal.id, animalId),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
       .limit(1);
 
     if (!animalData) {
-      return { error: "Animal não encontrado" };
+      return { error: "Animal não encontrado ou sem permissão" };
     }
 
     return { data: animalData };
@@ -124,10 +178,18 @@ export async function createAnimal(data: {
       })
       .returning();
 
-    await db.insert(baths).values({
+await db.insert(baths).values({
       petId: pet.id,
       date: data.lastBath,
       notes: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await db.insert(animalUsers).values({
+      animalId: pet.id,
+      userId: user.id,
+      role: "owner",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -281,4 +343,91 @@ function calculateCaloriePercentage(
 ): number {
   const dailyCalories = calculateDailyCalories(foodList);
   return Math.round((dailyCalories / goal) * 100);
+}
+
+export async function addUserToAnimal(
+  animalId: number,
+  userId: number,
+  role: "owner" | "caretaker" | "vet",
+) {
+  try {
+    const [relationship] = await db
+      .insert(animalUsers)
+      .values({
+        animalId,
+        userId,
+        role,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return { data: relationship };
+  } catch (error) {
+    console.error("Erro ao adicionar usuário ao animal:", error);
+    return { error: "Erro ao adicionar usuário ao animal" };
+  }
+}
+
+export async function removeUserFromAnimal(animalId: number, userId: number) {
+  try {
+    await db
+      .delete(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, animalId),
+          eq(animalUsers.userId, userId),
+        ),
+      );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao remover usuário do animal:", error);
+    return { error: "Erro ao remover usuário do animal" };
+  }
+}
+
+export async function getAnimalUsers(animalId: number) {
+  try {
+    const animalUserList = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        role: animalUsers.role,
+      })
+      .from(animalUsers)
+      .innerJoin(users, eq(animalUsers.userId, users.id))
+      .where(eq(animalUsers.animalId, animalId));
+
+    return { data: animalUserList };
+  } catch (error) {
+    console.error("Erro ao buscar usuários do animal:", error);
+    return { error: "Erro ao buscar usuários do animal" };
+  }
+}
+
+export async function updateUserAnimalRole(
+  animalId: number,
+  userId: number,
+  role: "owner" | "caretaker" | "vet",
+) {
+  try {
+    const [updated] = await db
+      .update(animalUsers)
+      .set({ role, updatedAt: new Date() })
+      .where(
+        and(
+          eq(animalUsers.animalId, animalId),
+          eq(animalUsers.userId, userId),
+        ),
+      )
+      .returning();
+
+    return { data: updated };
+  } catch (error) {
+    console.error("Erro ao atualizar papel do usuário:", error);
+    return { error: "Erro ao atualizar papel do usuário" };
+  }
 }

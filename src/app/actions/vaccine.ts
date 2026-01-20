@@ -1,14 +1,46 @@
 "use server";
 
 import db from "@/lib/db";
-import { vaccinations } from "@/lib/schema";
-import { eq, desc } from "drizzle-orm";
+import { vaccinations, animalUsers, users } from "@/lib/schema";
+import { eq, desc, and } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
 
 export async function getVaccines(petId: string) {
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
     const petIdNum = Number(petId);
     if (Number.isNaN(petIdNum)) {
       return { error: "petId inválido" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, petIdNum),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
     }
 
     const vaccines = await db
@@ -31,6 +63,37 @@ export async function createVaccine(data: {
   expirationDate: Date;
 }) {
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, data.petId),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
+    }
+
     const [created] = await db
       .insert(vaccinations)
       .values({

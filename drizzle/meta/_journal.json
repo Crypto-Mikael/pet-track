@@ -8,6 +8,13 @@
       "when": 1768697907359,
       "tag": "0000_talented_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768873264210,
+      "tag": "0001_flawless_silverclaw",
+      "breakpoints": true
     }
   ]
 }

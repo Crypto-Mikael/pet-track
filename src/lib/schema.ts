@@ -6,7 +6,10 @@ import {
   integer,
   timestamp,
   numeric,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+
+export const userRoleEnum = pgEnum("user_role", ["owner", "caretaker", "vet"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -31,6 +34,15 @@ export const animal = pgTable("animal", {
   weightKg: numeric("weightKg").notNull(),
   bathsCycleDays: integer("bathsCycleDays").default(28).notNull(),
   dailyCalorieGoal: numeric("dailyCalorieGoal").default("500").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").notNull(),
+});
+
+export const animalUsers = pgTable("animal_users", {
+  id: serial("id").primaryKey(),
+  animalId: integer("animalId").notNull().references(() => animal.id),
+  userId: integer("userId").notNull().references(() => users.id),
+  role: userRoleEnum("role").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").notNull(),
 });
@@ -71,8 +83,9 @@ export const foods = pgTable("foods", {
 });
 
 type Animal = typeof animal.$inferSelect;
+type AnimalUser = typeof animalUsers.$inferSelect;
 type Bath = typeof baths.$inferSelect;
-type Food = typeof foods.$inferInsert;
+type Food = typeof foods.$inferSelect;
 type User = typeof users.$inferSelect;
 type Vaccination = typeof vaccinations.$inferSelect;
-export type { Animal, Bath, Food, User, Vaccination };
+export type { Animal, AnimalUser, Bath, Food, User, Vaccination };

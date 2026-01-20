@@ -104,7 +104,7 @@ export default function CardCount({ animal, metrics }: { animal: Animal | null; 
             <p className="text-2xl text-center font-semibold text-card-foreground">kcal</p>
           </div>
         </Link>
-  <Link href={`vaccine/${animal.id}`} className="border-border flex w-full max-w-80 bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
+  <Link href={`/vaccine/${animal.id}`} className="border-border flex w-full max-w-80 bg-card border-2 rounded-2xl h-28 cursor-pointer hover:bg-card/60 transition-colors">
           <div className="flex items-center justify-center p-8">
             <Syringe className="size-12 text-card-foreground rounded-full" />
           </div>

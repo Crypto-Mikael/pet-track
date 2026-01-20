@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Plus, Trash2, ArrowLeft, Bone } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Bone, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import SliderTooltip from "@/components/ui/slider";
@@ -137,6 +137,29 @@ export default function DietPage() {
     }
   };
 
+  const repeatFood = async (food: Food) => {
+    try {
+      const payload = {
+        name: food.name,
+        amount: food.amount,
+        kcal: food.kcal,
+        protein: food.protein,
+        fat: food.fat,
+        carbs: food.carbs,
+        notes: food.notes,
+        petId: Number(params.petId),
+        createdAt: new Date(selectedDate),
+      } as Partial<Food>;
+
+      const result = await createFood(payload);
+      if (result.data) {
+        setFoods((prev) => [result.data!, ...prev]);
+      }
+    } catch (err) {
+      console.error("Erro ao repetir refeição:", err);
+    }
+  };
+
   /* -------------------------------- render ------------------------------- */
 
   return (
@@ -253,6 +276,13 @@ export default function DietPage() {
                   }}
                 >
                   EDITAR
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-xs px-3"
+                  onClick={() => repeatFood(food)}
+                >
+                  <RotateCcw size={12} />
                 </Button>
                 <Button
                   variant="destructive"

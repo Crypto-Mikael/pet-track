@@ -1,11 +1,43 @@
 "use server";
 
 import db from "@/lib/db";
-import { baths } from "@/lib/schema";
-import { eq, desc } from "drizzle-orm";
+import { baths, animalUsers, users } from "@/lib/schema";
+import { eq, desc, and } from "drizzle-orm";
+import { currentUser } from "@clerk/nextjs/server";
 
 export async function getBaths(petId: number) {
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, petId),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
+    }
+
     const bathList = await db
       .select()
       .from(baths)
@@ -25,6 +57,37 @@ export async function createBath(data: {
   notes?: string | null;
 }) {
   try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, data.petId),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
+    }
+
     const [created] = await db
       .insert(baths)
       .values({
