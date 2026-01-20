@@ -55,5 +55,7 @@
   "lang": "pt-BR",
   "dir": "ltr",
   "scope": "/",
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "gcm_sender_id": "your-sender-id",
+  "permissions": ["notifications", "push"]
 }

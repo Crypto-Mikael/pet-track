@@ -160,8 +160,25 @@ const clerkUser = await currentUser();
       updatedAt: createdAt,
     } as Food;
 
-    const [created] = await db.insert(foods).values(food).returning();
-
+const [created] = await db.insert(foods).values(food).returning();
+    
+    // Send push notification for feeding
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/push/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'feed',
+          petName: pet.name,
+          message: `${pet.name} has been fed with ${name} (${kcal} kcal) 🍖`
+        })
+      });
+    } catch (pushError) {
+      console.log('Could not send push notification:', pushError);
+    }
+ 
     return { data: created };
   } catch (error) {
     console.error("Erro ao criar alimento:", error);
