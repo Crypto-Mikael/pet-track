@@ -17,7 +17,7 @@ export default function NavBar() {
   const pathName = usePathname();
 
   return (
-    <nav className="sm:hidden sticky w-full flex justify-around bottom-0 bg-background z-50">
+<nav className="sm:hidden sticky w-full flex justify-around bottom-0 bg-background z-50 pb-safe">
       <div className="px-1 py-4 w-full gap-4 flex justify-around border-t border-t-border">
         {navItems.map(({ href, icon: Icon }) => (
           <Button
