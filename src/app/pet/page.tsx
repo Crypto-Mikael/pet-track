@@ -3,23 +3,27 @@ import { Button } from "@/components/ui/button";
 import HoldToConfirmButton from "@/components/ui/buttonHold";
 import CardNew from "@/components/ui/cardNew";
 import ListItem from "@/components/ui/listItem";
-import { type Animal, users } from "@/lib/schema";
+import { type Animal } from "@/lib/schema";
+
+type AnimalWithRole = Animal & {
+  role: "owner" | "caretaker" | "vet";
+};
 import { Edit, List, Trash } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getAnimals, deleteAnimal as deleteAnimalAction } from "@/app/actions/pet";
+import { getAnimals, removeAnimalAssociation } from "@/app/actions/pet";
 
 export default function Page() {
-    const [animals, setAnimals] = useState<Animal[] | null >(null);
+    const [animals, setAnimals] = useState<AnimalWithRole[] | null >(null);
 
-    const deleteAnimal = async (id: number) => {
+const handleRemoveAssociation = async (animalId: number) => {
       try {
-        const result = await deleteAnimalAction(String(id));
-        if (result.success) {
-          setAnimals(prevAnimals => prevAnimals ? prevAnimals.filter(animal => animal.id !== id) : null);
+        const result = await removeAnimalAssociation(animalId);
+        if ('success' in result && result.success) {
+          setAnimals(prevAnimals => prevAnimals ? prevAnimals.filter(animal => animal.id !== animalId) : null);
         }
       } catch (error) {
-        console.error("Erro ao deletar animal:", error);
+        console.error("Erro ao remover associação do animal:", error);
       }
     }
 
@@ -60,7 +64,9 @@ export default function Page() {
               <ListItem props={{ name: animal.name, details: animal.details ?? '', imageUrl: animal.imageUrl }} />
             </Link>
             <div className="flex justify-between flex-col ">
-              <HoldToConfirmButton icon={<Trash className="z-50" />} progressColor="bg-destructive" buttonText="" onHoldFinished={() => {deleteAnimal(animal.id)}} />
+              {animal.role === 'owner' && (
+                <HoldToConfirmButton icon={<Trash className="z-50" />} progressColor="bg-destructive" buttonText="" onHoldFinished={() => {handleRemoveAssociation(animal.id)}} />
+              )}
             </div>
           </div>
         ))}

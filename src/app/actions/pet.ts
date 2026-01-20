@@ -220,6 +220,32 @@ export async function deleteAnimal(id: string) {
   }
 }
 
+export async function removeAnimalAssociation(animalId: number) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const result = await removeUserFromAnimal(animalId, user.id);
+    return result;
+  } catch (error) {
+    console.error("Erro ao remover associação do animal:", error);
+    return { error: "Erro ao remover associação do animal" };
+  }
+}
+
 export async function updateBathsCycleDays(id: string, bathsCycleDays: number) {
   try {
     const animalId = Number(id);
