@@ -19,15 +19,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 });
     }
 
-    const usersRes = await db
+    let usersRes = await db
       .select()
       .from(users)
       .where(eq(users.clerkId, clerkUser.id))
       .limit(1);
 
-    const user = usersRes[0];
+    let user = usersRes[0];
+    
+    // Create user if they don't exist yet
     if (!user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+      const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
+      const name = `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim();
+      
+      const inserted = await db
+        .insert(users)
+        .values({
+          clerkId: clerkUser.id,
+          email,
+          name,
+          cpf: "",
+          phone: "",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+      
+      user = inserted[0];
     }
 
     // Check if pet exists
