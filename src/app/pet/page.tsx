@@ -8,7 +8,7 @@ import { type Animal } from "@/lib/schema";
 type AnimalWithRole = Animal & {
   role: "owner" | "caretaker" | "vet";
 };
-import { Edit, List, Trash, X } from "lucide-react";
+import { Edit, List, Trash, Unlink, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getAnimals, deleteAnimal as deleteAnimalAction, removeAnimalAssociation } from "@/app/actions/pet";
@@ -76,19 +76,26 @@ const handleDeleteAnimal = async (id: number) => {
               <ListItem props={{ name: animal.name, details: animal.details ?? '', imageUrl: animal.imageUrl }} />
             </Link>
 <div className="flex justify-between flex-col gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => window.location.href = `/pet/${animal.id}/edit`}
+              >
+                <Edit className="z-50" />
+              </Button>
               {animal.role === 'owner' && (
                 <HoldToConfirmButton 
                   icon={<Trash className="z-50" />} 
                   progressColor="bg-destructive" 
-                  buttonText="Delete" 
+                  buttonText="" 
                   onHoldFinished={() => {handleDeleteAnimal(animal.id)}} 
                 />
               )}
               {(animal.role === 'caretaker' || animal.role === 'vet') && (
                 <HoldToConfirmButton 
-                  icon={<X className="z-50" />} 
+                  icon={<Unlink />} 
                   progressColor="bg-secondary" 
-                  buttonText="Remove" 
+                  buttonText="" 
                   onHoldFinished={() => {handleRemoveAssociation(animal.id)}} 
                 />
               )}

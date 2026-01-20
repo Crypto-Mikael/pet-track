@@ -204,6 +204,70 @@ await db.insert(baths).values({
   }
 }
 
+export async function updateAnimal(animalId: number, data: {
+  name: string;
+  breed: string;
+  details?: string;
+  gender: string;
+  age: Date;
+  imageUrl?: string;
+  weightKg?: string;
+}) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    // Check if user has permission to edit this animal
+    const [animalUser] = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, animalId),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (!animalUser) {
+      return { error: "Sem permissão para editar este animal" };
+    }
+
+    const [updatedAnimal] = await db
+      .update(animal)
+      .set({
+        name: data.name,
+        details: data.details || null,
+        breed: data.breed,
+        gender: data.gender,
+        age: data.age,
+        imageUrl: data.imageUrl || null,
+        weightKg: data.weightKg || "0",
+        updatedAt: new Date(),
+      })
+      .where(eq(animal.id, animalId))
+      .returning();
+
+    return { data: updatedAnimal };
+  } catch (error) {
+    console.error("Erro ao atualizar animal:", error);
+    return { error: "Erro ao atualizar animal" };
+  }
+}
+
 export async function deleteAnimal(id: string) {
   try {
     const animalId = Number(id);
