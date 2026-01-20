@@ -76,20 +76,23 @@ const handleDeleteAnimal = async (id: number) => {
               <ListItem props={{ name: animal.name, details: animal.details ?? '', imageUrl: animal.imageUrl }} />
             </Link>
 <div className="flex justify-between flex-col gap-2">
+              {animal.role === 'owner' && (
+                <>
               <Button 
-                variant="ghost" 
+                variant="secondary"
+                className="size-12"
                 size="icon" 
                 onClick={() => window.location.href = `/pet/${animal.id}/edit`}
               >
                 <Edit className="z-50" />
               </Button>
-              {animal.role === 'owner' && (
                 <HoldToConfirmButton 
                   icon={<Trash className="z-50" />} 
                   progressColor="bg-destructive" 
                   buttonText="" 
                   onHoldFinished={() => {handleDeleteAnimal(animal.id)}} 
                 />
+                </>
               )}
               {(animal.role === 'caretaker' || animal.role === 'vet') && (
                 <HoldToConfirmButton 
