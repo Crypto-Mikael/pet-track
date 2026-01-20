@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { addUserToAnimal } from "@/app/actions/pet";
 import { Button } from "@/components/ui/button";
 
 export default function SharePage() {
+  const params = useParams<{ petId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const petId = searchParams.get("petId");
+  const petId = params.petId;
   const role = searchParams.get("role") as "owner" | "caretaker" | "vet" | null;
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");

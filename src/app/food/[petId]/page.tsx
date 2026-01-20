@@ -24,7 +24,6 @@ import {
   createFood,
   updateFood,
   deleteFood,
-  getAllFoods,
 } from "@/app/actions/food";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +38,25 @@ import {
 const toNumber = (v: unknown) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+};
+
+const STORAGE_KEY = (petId: string) => `pet-track-foods-${petId}`;
+
+const loadFromStorage = (petId: string): Food[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY(petId));
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveToStorage = (petId: string, foods: Food[]) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY(petId), JSON.stringify(foods));
+  } catch {}
 };
 
 export default function DietPage() {
@@ -70,17 +88,22 @@ export default function DietPage() {
 
         const date = new Date(`${selectedDate}T00:00:00`);
 
-        const [foodsResult, animalResult, allFoodsResult] = await Promise.all([
+        const [foodsResult, animalResult] = await Promise.all([
           getFoods(params.petId, date),
           getAnimal(params.petId),
-          getAllFoods(params.petId),
         ]);
 
         if (!active) return;
 
         setFoods(foodsResult.data ?? []);
         setAnimal(animalResult.data ?? null);
-        setAllFoods(allFoodsResult.data ?? []);
+        
+        const storedFoods = loadFromStorage(params.petId);
+        const mergedFoods = Array.from(
+          new Map([...storedFoods, ...(foodsResult.data ?? [])].map((f) => [f.name, f])).values()
+        );
+        setAllFoods(mergedFoods);
+        saveToStorage(params.petId, mergedFoods);
 
         if (animalResult.data) {
           setCalorieGoal(Number(animalResult.data.dailyCalorieGoal) || 0);
@@ -143,6 +166,13 @@ export default function DietPage() {
         const result = await createFood(payload);
         if (result.data) {
           setFoods((prev) => [result.data!, ...prev]);
+          
+          const updatedAllFoods = [result.data, ...allFoods];
+          const uniqueFoods = Array.from(
+            new Map(updatedAllFoods.map((f) => [f.name, f])).values()
+          );
+          setAllFoods(uniqueFoods);
+          saveToStorage(params.petId, uniqueFoods);
         }
       }
 
