@@ -229,3 +229,54 @@ export async function deleteFood(id: string) {
     return { error: "Erro ao deletar alimento" };
   }
 }
+
+export async function getAllFoods(petId: string) {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return { error: "Não autorizado" };
+    }
+
+    const usersRes = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+
+    const user = usersRes[0];
+    if (!user) {
+      return { error: "Usuário não encontrado" };
+    }
+
+    const petIdNum = Number(petId);
+    if (Number.isNaN(petIdNum)) {
+      return { error: "petId deve ser um número válido" };
+    }
+
+    const hasPermission = await db
+      .select()
+      .from(animalUsers)
+      .where(
+        and(
+          eq(animalUsers.animalId, petIdNum),
+          eq(animalUsers.userId, user.id),
+        ),
+      )
+      .limit(1);
+
+    if (hasPermission.length === 0) {
+      return { error: "Sem permissão para acessar este animal" };
+    }
+
+    const list = await db
+      .select()
+      .from(foods)
+      .where(eq(foods.petId, petIdNum))
+      .orderBy(desc(foods.createdAt));
+
+    return { data: list };
+  } catch (error) {
+    console.error("Erro ao buscar todos alimentos:", error);
+    return { error: "Erro ao buscar todos alimentos" };
+  }
+}

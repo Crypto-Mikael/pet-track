@@ -24,9 +24,17 @@ import {
   createFood,
   updateFood,
   deleteFood,
+  getAllFoods,
 } from "@/app/actions/food";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const toNumber = (v: unknown) => {
   const n = Number(v);
@@ -40,6 +48,7 @@ export default function DietPage() {
   const [foods, setFoods] = useState<Food[]>([]);
   const [animal, setAnimal] = useState<Animal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [allFoods, setAllFoods] = useState<Food[]>([]);
 
   const [open, setOpen] = useState(false);
   const [editingFood, setEditingFood] = useState<Food | null>(null);
@@ -61,15 +70,17 @@ export default function DietPage() {
 
         const date = new Date(`${selectedDate}T00:00:00`);
 
-        const [foodsResult, animalResult] = await Promise.all([
+        const [foodsResult, animalResult, allFoodsResult] = await Promise.all([
           getFoods(params.petId, date),
           getAnimal(params.petId),
+          getAllFoods(params.petId),
         ]);
 
         if (!active) return;
 
         setFoods(foodsResult.data ?? []);
         setAnimal(animalResult.data ?? null);
+        setAllFoods(allFoodsResult.data ?? []);
 
         if (animalResult.data) {
           setCalorieGoal(Number(animalResult.data.dailyCalorieGoal) || 0);
@@ -95,6 +106,21 @@ export default function DietPage() {
     if (!calorieGoal) return 0;
     return Math.round((dailyCalories / calorieGoal) * 100);
   }, [dailyCalories, calorieGoal]);
+
+  const onFoodSelect = (foodId: string) => {
+    const food = allFoods.find((f) => f.id === Number(foodId));
+    if (food) {
+      reset({
+        name: food.name,
+        amount: food.amount,
+        kcal: food.kcal,
+        protein: food.protein,
+        fat: food.fat,
+        carbs: food.carbs,
+        notes: food.notes,
+      });
+    }
+  };
 
   const onSubmit = async (data: Partial<Food>) => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -331,6 +357,28 @@ export default function DietPage() {
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-4"
           >
+            {!editingFood && allFoods.length > 0 && (
+              <div>
+                <label className="text-sm font-semibold mb-2 block">
+                  Selecione uma refeição anterior
+                </label>
+                <Select onValueChange={onFoodSelect}>
+                  <SelectTrigger className="w-full border rounded p-2">
+                    <SelectValue placeholder="Ou escolha uma refeição anterior" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from(
+                      new Map(allFoods.map((f) => [f.name, f])).values()
+                    ).map((food) => (
+                      <SelectItem key={food.id} value={String(food.id)}>
+                        {food.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <Input
               label="Nome da Refeição"
               {...register("name", { required: true })}
